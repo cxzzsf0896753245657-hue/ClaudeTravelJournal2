@@ -722,130 +722,46 @@
   const TRIP_DATA_PREFIX = "trip-data-v1-";
   const INDEX_KEY = "trip-index-v1";
 
-  // ---------- IndexedDB: stores the actual bytes of every attachment ----------
-  // (images / PDFs / text files). IndexedDB has a much larger quota than
-  // localStorage (typically hundreds of MB+), so attachment content lives
-  // here; only lightweight metadata {id,name,kind,size} is kept in the trip's
-  // localStorage record.
-  const IDB_NAME = "travel-journal-files-v1";
-  const IDB_STORE = "files";
-  let idbPromise = null;
+  // ---------- Attachment content storage (localStorage) ----------
+  // Attachment bytes (images / PDFs / text files, as data URLs or plain text)
+  // are stored directly in localStorage under their own key, one key per
+  // attachment. Only lightweight metadata {id,name,kind,size} is kept inside
+  // the trip's own JSON record.
+  const ATT_PREFIX = "att-content-v1-";
 
-  function getIDB(){
-    if(idbPromise) return idbPromise;
-    idbPromise = new Promise((resolve, reject)=>{
-      if(!window.indexedDB){ reject(new Error("IndexedDB not supported")); return; }
-      const req = indexedDB.open(IDB_NAME, 1);
-      req.onupgradeneeded = ()=>{
-        const dbi = req.result;
-        if(!dbi.objectStoreNames.contains(IDB_STORE)){
-          dbi.createObjectStore(IDB_STORE, { keyPath: "id" });
-        }
-      };
-      req.onsuccess = ()=> resolve(req.result);
-      req.onerror = ()=> reject(req.error);
-    });
-    return idbPromise;
-  }
-
-  // record shape: { id, kind: 'image'|'pdf'|'txt', content }
+  // record shape: { kind: 'image'|'pdf'|'txt', content }
   // content is a data URL for image/pdf, or a plain text string for txt.
-  async function idbPutFile(record){
-    const dbi = await getIDB();
-    return new Promise((resolve, reject)=>{
-      const tx = dbi.transaction(IDB_STORE, "readwrite");
-      tx.objectStore(IDB_STORE).put(record);
-      tx.oncomplete = ()=> resolve(true);
-      tx.onerror = ()=> reject(tx.error);
-    });
-  }
-
-  async function idbGetFile(id){
-    const dbi = await getIDB();
-    return new Promise((resolve, reject)=>{
-      const tx = dbi.transaction(IDB_STORE, "readonly");
-      const req = tx.objectStore(IDB_STORE).get(id);
-      req.onsuccess = ()=> resolve(req.result || null);
-      req.onerror = ()=> reject(req.error);
-    });
-  }
-
-  async function idbDeleteFile(id){
-    const dbi = await getIDB();
-    return new Promise((resolve, reject)=>{
-      const tx = dbi.transaction(IDB_STORE, "readwrite");
-      tx.objectStore(IDB_STORE).delete(id);
-      tx.oncomplete = ()=> resolve(true);
-      tx.onerror = ()=> reject(tx.error);
-    });
-  }
-
-  // small in-memory cache so re-rendering the same attachment list within a
-  // session doesn't have to hit storage again just to redraw a thumbnail.
-  const attachmentContentCache = new Map();
-
-  // ---------- fallback storage ----------
-  // Some environments (e.g. the page opened directly via file://, or a
-  // restrictive sandboxed embed) block or silently hang IndexedDB. To make
-  // sure uploads never just "disappear" with no feedback, we probe IndexedDB
-  // once (with a timeout so a hang can't freeze the upload forever) and, if
-  // it isn't usable, transparently fall back to storing each attachment's
-  // content under its own localStorage key instead.
-  let idbAvailable = null;
-  let fallbackNoticeShown = false;
-  const FALLBACK_PREFIX = "att-fallback-v1-";
-
-  function withTimeout(promise, ms, errMsg){
-    return Promise.race([
-      promise,
-      new Promise((_, reject)=> setTimeout(()=> reject(new Error(errMsg || "timeout")), ms))
-    ]);
-  }
-
-  async function ensureIdbReady(){
-    if(idbAvailable !== null) return idbAvailable;
-    try{
-      await withTimeout(getIDB(), 3000, "IndexedDB 開啟逾時");
-      idbAvailable = true;
-    }catch(e){
-      console.error("IndexedDB 無法使用，改用瀏覽器 localStorage 備援方式儲存檔案", e);
-      idbAvailable = false;
-      if(!fallbackNoticeShown){
-        fallbackNoticeShown = true;
-        showAlert("這個瀏覽器或開啟方式（例如直接用「開啟檔案」打開網頁）目前無法使用擴充儲存空間，已自動切換成備援模式。備援模式容量比較小，建議圖片/PDF 數量與大小盡量精簡，或改用網址（http/https）方式開啟這個頁面。");
-      }
-    }
-    return idbAvailable;
-  }
-
   async function storeAttachmentContent(id, kind, content){
-    const ok = await ensureIdbReady();
-    if(ok){
-      await idbPutFile({ id, kind, content });
-      return;
+    try{
+      localStorage.setItem(ATT_PREFIX + id, JSON.stringify({ kind, content }));
+    }catch(e){
+      console.error("儲存附件失敗", e);
+      await showAlert("儲存檔案失敗，瀏覽器本機空間可能已滿，請刪除一些檔案後再試一次。");
+      throw e;
     }
-    localStorage.setItem(FALLBACK_PREFIX + id, JSON.stringify({ kind, content }));
   }
 
   async function fetchAttachmentContent(id){
-    const ok = await ensureIdbReady();
-    if(ok) return await idbGetFile(id);
     try{
-      const raw = localStorage.getItem(FALLBACK_PREFIX + id);
+      const raw = localStorage.getItem(ATT_PREFIX + id);
       return raw ? JSON.parse(raw) : null;
     }catch(e){
-      console.error("備援讀取失敗", e);
+      console.error("讀取附件失敗", e);
       return null;
     }
   }
 
   async function removeAttachmentContent(id){
-    const ok = await ensureIdbReady();
-    if(ok){
-      try{ await idbDeleteFile(id); }catch(e){ console.error(e); }
+    try{
+      localStorage.removeItem(ATT_PREFIX + id);
+    }catch(e){
+      console.error("刪除附件失敗", e);
     }
-    try{ localStorage.removeItem(FALLBACK_PREFIX + id); }catch(e){ /* ignore */ }
   }
+
+  // small in-memory cache so re-rendering the same attachment list within a
+  // session doesn't have to hit storage again just to redraw a thumbnail.
+  const attachmentContentCache = new Map();
 
   async function loadAttachmentContent(id){
     if(attachmentContentCache.has(id)) return attachmentContentCache.get(id);
@@ -854,11 +770,10 @@
     return rec;
   }
 
-  // Deletes one or more attachments' content from wherever it's stored
-  // (IndexedDB and/or the localStorage fallback) and clears the local cache.
+  // Deletes one or more attachments' content from storage and clears the local cache.
   async function idbDeleteFiles(ids){
     for(const id of (ids||[])){
-      try{ await removeAttachmentContent(id); }catch(e){ console.error("刪除本機檔案資料失敗", e); }
+      await removeAttachmentContent(id);
       attachmentContentCache.delete(id);
     }
   }
@@ -911,10 +826,10 @@
     return trip;
   }
 
-  // Older saves (before the IndexedDB migration) stored each image's full
-  // base64 data URL directly inside the attachment object. This moves any
-  // such leftover bytes into IndexedDB and strips them out of the JSON that
-  // lives in localStorage, so the trip's metadata stays lightweight.
+  // Older saves (before the current attachment-storage scheme) stored each
+  // image's full base64 data URL directly inside the attachment object. This
+  // moves any such leftover bytes into the attachment content store and
+  // strips them out of the JSON that lives in the trip's own record.
   async function migrateLegacyAttachmentList(list){
     if(!Array.isArray(list)) return false;
     let changed = false;
@@ -1034,8 +949,9 @@
     if(!currentTripId || !state) return;
     syncIndexEntryNow();
     saveTripIndexLocal();
-    // Attachment bytes now live in IndexedDB, not here — this payload is just
-    // text/metadata, so it should stay tiny no matter how many files are attached.
+    // Attachment bytes live under their own att-content-v1-* keys, not here —
+    // this payload is just text/metadata, so it should stay small no matter
+    // how many files are attached.
     const payload = JSON.stringify(state);
     try{
       localStorage.setItem(TRIP_DATA_PREFIX + currentTripId, payload);
@@ -1117,8 +1033,8 @@
   // Images are downscaled + re-encoded as JPEG (still kept as a data URL) to
   // save space; PDFs are read as-is into a data URL (can't be compressed);
   // text files are read as plain text. The resulting "content" is stored in
-  // IndexedDB (see idbPutFile above) — only lightweight metadata
-  // {id, name, size, kind} ever touches localStorage.
+  // localStorage (see storeAttachmentContent above) — only lightweight
+  // metadata {id, name, size, kind} ever lives inside the trip's own record.
   function detectAttKind(file){
     const name = (file.name || "").toLowerCase();
     if(file.type && file.type.indexOf("image/") === 0) return "image";
@@ -1177,8 +1093,8 @@
     return Math.round((content.length * (isDataUrl ? 0.75 : 1)) / 1024);
   }
 
-  // Reads (and compresses, for images) a FileList, stores each file's bytes in
-  // IndexedDB, and pushes lightweight metadata into targetArray. Calls onDone when finished.
+  // Reads (and compresses, for images) a FileList, stores each file's bytes
+  // in localStorage, and pushes lightweight metadata into targetArray. Calls onDone when finished.
   async function addFilesToArray(fileList, targetArray, onDone){
     const files = Array.from(fileList || []);
     for(const file of files){
@@ -1379,7 +1295,7 @@
 
     const hint = document.createElement("p");
     hint.className = "attachment-hint";
-    hint.textContent = "圖片會自動壓縮，檔案內容存在這台瀏覽器的本機資料庫（IndexedDB）裡，容量比之前大很多。";
+    hint.textContent = "圖片會自動壓縮，檔案內容存在這台瀏覽器的本機儲存空間裡。";
     box.appendChild(hint);
 
     const doneBtn = document.createElement("button");
@@ -2329,7 +2245,7 @@
   }
 
   // Copies a list of attachments to brand-new ids, including their actual
-  // bytes in IndexedDB (not just the metadata) so the clone is independent.
+  // bytes in storage (not just the metadata) so the clone is independent.
   async function cloneAttachmentList(list){
     const result = [];
     for(const att of (list||[])){
@@ -2390,7 +2306,7 @@
   }
 
   // Collects every attachment id referenced anywhere in a trip (trip-level,
-  // per-day, and per-card), used when wiping a trip's IndexedDB records.
+  // per-day, and per-card), used when wiping a trip's stored attachment content.
   function collectTripAttachmentIds(trip){
     const ids = [];
     (trip.attachments||[]).forEach(a=> ids.push(a.id));
