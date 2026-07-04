@@ -1,0 +1,2490 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>旅程手帳｜行程與花費規劃</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F0E4;
+    --grid-line: rgba(47,72,88,0.055);
+    --surface:#FFFFFF;
+    --surface-2:#FBF8F1;
+    --ink:#26221F;
+    --muted:#8A8072;
+    --indigo:#2F4858;
+    --indigo-2:#41637A;
+    --vermilion:#BF3B2C;
+    --vermilion-soft:#F4DAD4;
+    --matcha:#5F7A52;
+    --matcha-soft:#DEE7D6;
+    --ochre:#B98A34;
+    --ochre-soft:#F2E3C4;
+    --line:#DCD2BB;
+    --shadow: 0 1px 2px rgba(38,34,31,0.06), 0 6px 20px -8px rgba(38,34,31,0.18);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    color:var(--ink);
+    font-family:'Noto Sans TC', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:80px;
+  }
+  ::selection{ background:var(--ochre-soft); }
+  input, select, textarea, button{ font-family:inherit; color:inherit; }
+  button{ cursor:pointer; }
+
+  .mono{ font-family:'JetBrains Mono', monospace; }
+  .serif{ font-family:'Shippori Mincho', serif; }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    background: rgba(245,240,228,0.92);
+    backdrop-filter: blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    max-width:1180px; margin:0 auto; padding:18px 24px 14px;
+    display:flex; align-items:center; gap:26px; flex-wrap:wrap;
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+  }
+  .brand .stamp{
+    width:36px; height:36px; border-radius:50%;
+    border:2px solid var(--vermilion); color:var(--vermilion);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Shippori Mincho', serif; font-weight:700; font-size:14px;
+    letter-spacing:-1px; flex-shrink:0; box-shadow:0 1px 3px rgba(191,59,44,0.18);
+  }
+  .brand-title-input{
+    font-family:'Shippori Mincho', serif; font-weight:700; font-size:21px; letter-spacing:.01em;
+    border:none; background:transparent; outline:none; color:var(--ink);
+    padding:3px 6px; border-radius:6px; min-width:150px;
+  }
+  .brand-title-input:focus{ background:var(--surface); box-shadow:0 0 0 1px var(--line); }
+
+  .stats{
+    display:flex; gap:12px; margin-left:auto; flex-wrap:wrap; align-items:center;
+  }
+  .share-btn{
+    background:var(--surface); border:1px solid var(--indigo-2); border-radius:999px;
+    padding:7px 16px; font-size:12.5px; color:var(--indigo-2); cursor:pointer; white-space:nowrap;
+    display:flex; align-items:center; gap:6px; box-shadow:0 1px 2px rgba(38,34,31,0.04);
+  }
+  .share-btn:hover{ background:var(--surface-2); border-color:var(--indigo); }
+  .stat-chip{
+    background:var(--surface); border:1px solid var(--line); border-radius:999px;
+    padding:7px 16px; font-size:12.5px; color:var(--muted); display:flex; gap:8px; align-items:center;
+    white-space:nowrap; letter-spacing:.01em; box-shadow:0 1px 2px rgba(38,34,31,0.04);
+  }
+  .stat-chip b{ color:var(--ink); font-family:'JetBrains Mono',monospace; font-weight:600; font-size:13px; }
+  .stat-chip.budget b{ color:var(--indigo); }
+  .stat-chip.actual b{ color:var(--vermilion); }
+
+  .day-nav-wrap{
+    position:relative; max-width:1180px; margin:2px auto 0; border-top:1px dashed var(--line);
+  }
+  .day-nav{
+    padding:12px 24px 16px; margin:0; display:flex; gap:10px; overflow-x:auto;
+    scrollbar-width:none; cursor:grab; -webkit-overflow-scrolling:touch;
+  }
+  .day-nav::-webkit-scrollbar{ display:none; }
+  .day-nav.grabbing{ cursor:grabbing; }
+  .day-nav.grabbing .day-nav-chip{ pointer-events:none; }
+  .day-nav-fade{
+    position:absolute; top:0; bottom:0; width:36px; pointer-events:none; z-index:2;
+  }
+  .day-nav-fade.left{ left:0; background:linear-gradient(90deg, var(--paper), transparent); }
+  .day-nav-fade.right{ right:0; background:linear-gradient(270deg, var(--paper), transparent); }
+  .day-nav-chip{
+    flex-shrink:0; background:var(--surface); border:1px solid var(--line);
+    border-radius:999px; padding:8px 16px; display:flex; align-items:center; gap:7px;
+    box-shadow:0 1px 2px rgba(38,34,31,0.04); transition: box-shadow .15s, transform .15s, border-color .15s;
+    user-select:none;
+  }
+  .day-nav-chip:hover{ border-color:var(--indigo-2); box-shadow:0 3px 10px -4px rgba(38,34,31,0.25); transform:translateY(-1px); }
+  .day-nav-chip .day-num{ font-family:'Shippori Mincho',serif; font-weight:600; font-size:12.5px; color:var(--ink); white-space:nowrap; }
+  .day-nav-chip .day-dot{ width:3px; height:3px; border-radius:50%; background:var(--vermilion); flex-shrink:0; }
+  .day-nav-chip .day-date{ font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--muted); white-space:nowrap; }
+  .day-nav-chip.active{ border-color:var(--vermilion); background:var(--vermilion-soft); }
+  .day-nav-chip.active .day-num{ color:var(--vermilion); }
+
+  /* ---------- layout ---------- */
+  .wrap{ max-width:1180px; margin:0 auto; padding:24px 20px; }
+
+  .section-title{
+    display:flex; align-items:baseline; gap:10px; margin: 34px 0 14px;
+  }
+  .section-title .num{
+    font-family:'JetBrains Mono',monospace; color:var(--vermilion); font-size:13px;
+  }
+  .section-title h2{
+    font-family:'Shippori Mincho',serif; font-size:21px; font-weight:600; margin:0;
+  }
+  .section-title .rule{ flex:1; height:1px; background:var(--line); }
+
+  /* ---------- budget table ---------- */
+  .budget-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px 18px 8px; margin-bottom:10px;
+  }
+  .budget-meta{
+    display:flex; gap:24px; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .meta-field{ display:flex; flex-direction:column; gap:4px; }
+  .meta-field label{ font-size:11.5px; color:var(--muted); letter-spacing:.03em; }
+  .meta-field input{
+    border:none; border-bottom:1px solid var(--line); background:transparent;
+    font-family:'JetBrains Mono',monospace; font-size:15px; width:80px; padding:2px 0; outline:none;
+  }
+  .meta-field input:focus{ border-color:var(--indigo); }
+  .meta-field input.date-meta-input{
+    width:142px; font-family:'JetBrains Mono',monospace; font-size:13px;
+    padding:4px 2px; cursor:pointer;
+  }
+  .meta-hint{ font-size:11.5px; color:var(--muted); margin:-6px 0 16px; }
+
+  table.budget{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.budget th{
+    text-align:left; font-weight:500; color:var(--muted); font-size:11.5px;
+    padding:6px 8px; border-bottom:1px solid var(--line); letter-spacing:.02em;
+  }
+  table.budget td{ padding:6px 8px; border-bottom:1px dashed var(--line); vertical-align:middle; }
+  table.budget tr:last-child td{ border-bottom:none; }
+  table.budget input[type="text"]{
+    border:none; background:transparent; font-size:13.5px; width:100%; outline:none; padding:3px 4px; border-radius:4px;
+  }
+  table.budget input[type="text"]:focus{ background:var(--surface-2); }
+  table.budget input[type="number"]{
+    border:none; border-bottom:1px solid var(--line); background:transparent;
+    font-family:'JetBrains Mono',monospace; font-size:13.5px; width:78px; outline:none; padding:3px 2px; text-align:right;
+  }
+  table.budget input[type="number"]:focus{ border-color:var(--indigo); }
+  table.budget select{
+    border:1px solid var(--line); background:var(--surface-2); border-radius:6px;
+    font-size:12px; padding:3px 6px; outline:none;
+  }
+  table.budget td.num{ font-family:'JetBrains Mono',monospace; text-align:right; white-space:nowrap; }
+  .row-total td{ font-weight:600; border-top:2px solid var(--indigo); border-bottom:none !important; padding-top:10px; }
+  .row-total td.num{ color:var(--indigo); font-size:15px; }
+  .del-row-btn{
+    border:none; background:none; color:var(--muted); font-size:15px; line-height:1; padding:2px 6px; border-radius:4px;
+  }
+  .del-row-btn:hover{ color:var(--vermilion); background:var(--vermilion-soft); }
+  .add-cat-btn{
+    border:1px dashed var(--line); background:none; color:var(--indigo-2); font-size:12.5px;
+    padding:6px 12px; border-radius:8px; margin:10px 0 14px;
+  }
+  .add-cat-btn:hover{ border-color:var(--indigo); background:var(--surface-2); }
+
+  .compare-strip{
+    display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; margin-bottom:16px;
+  }
+  .compare-box{
+    flex:1; min-width:160px; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .compare-box .label{ font-size:11.5px; color:var(--muted); margin-bottom:4px; }
+  .compare-box .value{ font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:600; }
+  .compare-box.budget .value{ color:var(--indigo); }
+  .compare-box.actual .value{ color:var(--vermilion); }
+  .compare-box.diff .value{ color:var(--matcha); }
+  .compare-box .sub{ font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* ---------- days ---------- */
+  .day{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); margin-bottom:22px; overflow:hidden; scroll-margin-top:130px;
+  }
+  .day-head{
+    display:flex; align-items:center; gap:12px; padding:14px 18px;
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border-bottom:1px solid var(--line); flex-wrap:wrap;
+  }
+  .hanko{
+    width:38px; height:38px; border-radius:50%; border:2px solid var(--vermilion);
+    color:var(--vermilion); display:flex; align-items:center; justify-content:center;
+    font-family:'Shippori Mincho',serif; font-weight:700; font-size:14px; flex-shrink:0;
+  }
+  .day-head input.date-input{
+    font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14.5px; border:none;
+    background:transparent; outline:none; width:112px; padding:3px 4px; border-radius:4px;
+  }
+  .day-head input.weekday-input{
+    font-size:12.5px; color:var(--muted); border:none; background:transparent; outline:none;
+    width:60px; padding:3px 4px; border-radius:4px;
+  }
+  .day-head input.city-input{
+    font-family:'Shippori Mincho',serif; font-size:15px; border:none; background:transparent;
+    outline:none; flex:1; min-width:100px; padding:3px 6px; border-radius:4px;
+  }
+  .day-head input:focus{ background:var(--surface); box-shadow:0 0 0 1px var(--line); }
+  .day-actions{ display:flex; gap:6px; margin-left:auto; }
+  .icon-btn{
+    border:1px solid var(--line); background:var(--surface); border-radius:8px;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:14px;
+  }
+  .icon-btn:hover{ color:var(--vermilion); border-color:var(--vermilion); }
+
+  .day-handle{
+    cursor:grab; color:var(--muted); font-size:15px; padding:4px 2px; touch-action:none;
+    line-height:1; user-select:none; flex-shrink:0;
+  }
+  .day-handle:active{ cursor:grabbing; }
+  .day-handle:hover{ color:var(--indigo); }
+  .day.day-dragging-source{ opacity:0.35; }
+  .day-drag-ghost{
+    position:fixed; z-index:300; pointer-events:none; background:var(--indigo); color:#fff;
+    padding:10px 18px; border-radius:10px; font-size:13.5px; font-weight:600;
+    box-shadow:0 14px 32px -8px rgba(38,34,31,0.45); transform:rotate(-1deg);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .day-placeholder{
+    height:6px; background:var(--vermilion); border-radius:4px; margin:0 0 22px;
+  }
+
+  .stay-card{
+    display:flex; align-items:center; gap:10px; padding:11px 16px;
+    background:var(--ochre-soft); border-top:1px solid var(--line); flex-wrap:wrap;
+  }
+  .stay-label{
+    background:var(--ochre); color:#fff; font-size:10.5px; font-weight:600;
+    padding:4px 11px; border-radius:999px; flex-shrink:0; letter-spacing:.02em;
+  }
+  .stay-name-input{
+    flex:1.4; min-width:140px; border:1px solid transparent; background:var(--surface);
+    border-radius:8px; padding:7px 11px; font-size:13px; outline:none;
+  }
+  .stay-name-input:focus{ border-color:var(--ochre); }
+  .stay-name-input::placeholder{ color:var(--muted); }
+  .stay-cost-wrap{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .stay-cost-input{
+    width:72px; border:none; border-bottom:1px solid var(--line); background:transparent;
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; outline:none; padding:4px 0; text-align:right;
+  }
+  .stay-cost-input:focus{ border-color:var(--ochre); }
+  .stay-note-input{
+    flex:1; min-width:120px; border:1px solid transparent; background:var(--surface);
+    border-radius:8px; padding:7px 11px; font-size:12px; color:var(--muted); outline:none;
+  }
+  .stay-note-input:focus{ border-color:var(--ochre); color:var(--ink); }
+
+  /* ---------- trip-level notes & attachments ---------- */
+  .notes-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px; margin-bottom:10px;
+  }
+  .notes-textarea{
+    width:100%; min-height:96px; border:1px solid var(--line); border-radius:10px;
+    background:var(--surface-2); padding:12px 14px; font-size:13.5px; line-height:1.7;
+    outline:none; resize:vertical; font-family:'Noto Sans TC',sans-serif; color:var(--ink);
+  }
+  .notes-textarea:focus{ border-color:var(--indigo); background:var(--surface); }
+  .notes-textarea::placeholder{ color:var(--muted); }
+
+  .attachment-grid{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+  .attachment-thumb{
+    position:relative; width:84px; height:84px; border-radius:10px; overflow:hidden;
+    border:1px solid var(--line); background:var(--surface-2); flex-shrink:0;
+  }
+  .attachment-thumb img{ width:100%; height:100%; object-fit:cover; cursor:zoom-in; display:block; }
+  .attachment-thumb.loading{ display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; }
+  .file-tile{
+    width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px; cursor:pointer; padding:6px 4px; text-align:center; background:var(--surface-2); border:none;
+  }
+  .file-tile .file-tile-icon{ font-size:22px; line-height:1; }
+  .file-tile .file-tile-name{
+    font-size:9.5px; color:var(--muted); line-height:1.3; word-break:break-all;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .file-tile:hover{ background:var(--surface); }
+  .text-preview-pre{
+    white-space:pre-wrap; word-break:break-word; max-height:56vh; overflow:auto;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; font-size:12.5px; line-height:1.7; margin:0; font-family:'JetBrains Mono',monospace;
+  }
+  .attachment-del{
+    position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%;
+    border:none; background:rgba(38,34,31,0.6); color:#fff; font-size:12px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .attachment-del:hover{ background:var(--vermilion); }
+
+  .attachment-add-btn{
+    display:inline-flex; align-items:center; gap:6px; border:1px dashed var(--line);
+    background:none; color:var(--indigo-2); font-size:12.5px; padding:8px 14px;
+    border-radius:8px; margin-top:14px; cursor:pointer;
+  }
+  .attachment-add-btn:hover{ border-color:var(--indigo); background:var(--surface-2); }
+  .attachment-hint{ font-size:11px; color:var(--muted); margin:8px 0 0; }
+
+  .lightbox-overlay{
+    position:fixed; inset:0; background:rgba(20,18,16,0.82); z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .lightbox-box{ position:relative; max-width:92vw; max-height:88vh; }
+  .lightbox-box img{ max-width:92vw; max-height:88vh; border-radius:8px; display:block; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+  .lightbox-close{
+    position:absolute; top:-14px; right:-14px; width:32px; height:32px; border-radius:50%;
+    border:none; background:var(--surface); color:var(--ink); font-size:16px; box-shadow:var(--shadow);
+  }
+
+  /* ---------- per-day file strip ---------- */
+  .day-files{
+    display:flex; align-items:flex-start; gap:10px; padding:11px 16px;
+    background:var(--surface-2); border-top:1px solid var(--line); flex-wrap:wrap;
+  }
+  .day-files-label{
+    font-size:10.5px; font-weight:600; color:var(--indigo-2); padding-top:5px; flex-shrink:0;
+    letter-spacing:.02em; white-space:nowrap;
+  }
+  .day-files .attachment-grid{ margin-top:0; flex:1; }
+  .day-files .attachment-thumb{ width:56px; height:56px; border-radius:8px; }
+  .day-files .file-tile .file-tile-icon{ font-size:16px; }
+  .day-files .file-tile .file-tile-name{ font-size:8px; -webkit-line-clamp:1; }
+  .day-files-add{
+    flex-shrink:0; width:56px; height:56px; border:1px dashed var(--line); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:18px;
+    cursor:pointer;
+  }
+  .day-files-add:hover{ border-color:var(--indigo-2); color:var(--indigo-2); background:var(--surface); }
+
+
+  .periods{ display:flex; gap:1px; background:var(--line); }
+  @media (max-width: 760px){ .periods{ flex-direction:column; } }
+  .period-col{
+    flex:1; min-width:0; background:var(--surface); padding:12px; display:flex; flex-direction:column; gap:8px;
+  }
+  .period-label{
+    font-size:11.5px; letter-spacing:.05em; color:var(--muted); font-weight:600;
+    display:flex; align-items:center; gap:6px; padding:0 2px;
+  }
+  .period-label .dot{ width:6px; height:6px; border-radius:50%; background:var(--ochre); }
+  .period-col[data-period="早上"] .dot{ background:var(--ochre); }
+  .period-col[data-period="下午"] .dot{ background:var(--indigo-2); }
+  .period-col[data-period="晚上"] .dot{ background:var(--vermilion); }
+
+  .cards{ display:flex; flex-direction:column; gap:8px; min-height:14px; }
+  .card{
+    background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:9px 10px;
+    position:relative; transition: box-shadow .15s, transform .15s;
+  }
+  .card.dragging{ opacity:0.35; }
+  .card.drag-ghost{
+    position:fixed; z-index:200; pointer-events:none; box-shadow:0 12px 30px -6px rgba(38,34,31,0.35);
+    transform: rotate(-1.2deg) scale(1.02); background:var(--surface);
+  }
+  .card-top{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .handle{
+    cursor:grab; color:var(--muted); font-size:13px; padding:2px 4px; touch-action:none; line-height:1;
+    user-select:none;
+  }
+  .handle:active{ cursor:grabbing; }
+  .cat-tag{
+    font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:999px; border:none; outline:none;
+    font-family:'Noto Sans TC',sans-serif;
+  }
+  .cat-tag.交通{ background:var(--indigo); color:#fff; }
+  .cat-tag.景點{ background:var(--matcha); color:#fff; }
+  .cat-tag.餐廳{ background:var(--vermilion); color:#fff; }
+  .cat-tag.住宿{ background:var(--ochre); color:#fff; }
+  .cat-tag.其他{ background:#9C9284; color:#fff; }
+  .time-input{
+    border:none; background:transparent; font-family:'JetBrains Mono',monospace; font-size:11.5px;
+    color:var(--muted); width:52px; outline:none; padding:2px;
+  }
+  .time-input:focus{ background:var(--surface); border-radius:4px; }
+  .card-dup{ margin-left:auto; border:none; background:none; color:var(--muted); font-size:12px; padding:2px 5px; border-radius:4px; }
+  .card-dup:hover{ color:var(--indigo); background:var(--surface); }
+  .card-del{ border:none; background:none; color:var(--muted); font-size:14px; padding:2px 4px; }
+  .card-del:hover{ color:var(--vermilion); }
+  .title-input{
+    border:none; background:transparent; width:100%; font-size:13.5px; outline:none;
+    padding:2px 2px 4px; font-weight:500;
+  }
+  .title-input:focus{ background:var(--surface); border-radius:4px; }
+  .title-input::placeholder{ color:var(--muted); font-weight:400; }
+  .card-bottom{ display:flex; align-items:center; gap:6px; }
+  .cost-wrap{ display:flex; align-items:center; gap:3px; flex-shrink:0; }
+  .cost-input{
+    border:none; border-bottom:1px solid var(--line); background:transparent; width:56px;
+    font-family:'JetBrains Mono',monospace; font-size:12px; outline:none; padding:2px 0; text-align:right;
+  }
+  .cost-input:focus{ border-color:var(--indigo); }
+  .cost-unit{ font-size:11px; color:var(--muted); }
+  .card-note-btn{
+    border:none; background:transparent; flex:1; min-width:0; font-size:11.5px; color:var(--muted);
+    outline:none; padding:4px 6px; text-align:left; border-radius:4px; cursor:pointer;
+    overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  }
+  .card-note-btn:hover{ background:var(--surface); }
+  .card-note-btn.has-content{ color:var(--indigo); font-weight:500; }
+
+  .block-editor-overlay{
+    position:fixed; inset:0; background:rgba(38,34,31,0.5); z-index:900;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .block-editor-box{
+    background:var(--surface); border-radius:var(--radius); padding:22px; max-width:420px; width:100%;
+    box-shadow:0 24px 60px -14px rgba(38,34,31,0.55); max-height:86vh; overflow-y:auto;
+  }
+  .block-editor-header{
+    font-family:'Shippori Mincho',serif; font-weight:600; font-size:15px; margin-bottom:12px; color:var(--ink);
+  }
+  .block-editor-textarea{
+    width:100%; min-height:88px; border:1px solid var(--line); border-radius:10px;
+    background:var(--surface-2); padding:11px 13px; font-size:13.5px; line-height:1.7;
+    outline:none; resize:vertical; font-family:'Noto Sans TC',sans-serif; color:var(--ink);
+  }
+  .block-editor-textarea:focus{ border-color:var(--indigo); background:var(--surface); }
+  .block-editor-textarea::placeholder{ color:var(--muted); }
+  .block-editor-close{
+    display:block; width:100%; margin-top:16px; border:none; background:var(--indigo); color:#fff;
+    padding:10px; border-radius:8px; font-size:13.5px; cursor:pointer;
+  }
+  .block-editor-close:hover{ opacity:.92; }
+
+  .add-card-btn{
+    border:1px dashed var(--line); background:none; color:var(--muted); font-size:12px;
+    padding:7px; border-radius:8px; text-align:center;
+  }
+  .add-card-btn:hover{ border-color:var(--indigo); color:var(--indigo); background:var(--surface-2); }
+
+  .day-add-wrap{ display:flex; justify-content:center; margin:20px 0 40px; }
+  .add-day-btn{
+    border:1.5px dashed var(--indigo-2); background:none; color:var(--indigo-2); font-family:'Shippori Mincho',serif;
+    font-size:14px; padding:10px 26px; border-radius:999px;
+  }
+  .add-day-btn:hover{ background:var(--surface); box-shadow:var(--shadow); }
+
+  .footer-note{
+    max-width:1180px; margin:0 auto; padding:0 20px; color:var(--muted); font-size:11.5px; text-align:center;
+  }
+
+  .placeholder-slot{
+    height:2px; background:var(--vermilion); border-radius:2px; margin:0 2px;
+  }
+
+  .save-indicator{
+    position:fixed; bottom:16px; right:16px; z-index:100; font-size:11.5px; color:var(--muted);
+    background:var(--surface); border:1px solid var(--line); padding:6px 12px; border-radius:999px;
+    box-shadow:var(--shadow); opacity:0; transition:opacity .3s;
+  }
+  .save-indicator.show{ opacity:1; }
+  .save-indicator.error{ border-color:var(--vermilion); color:var(--vermilion); font-weight:600; }
+
+  .loading-screen{
+    position:fixed; inset:0; background:var(--paper); display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:10px; z-index:1000;
+  }
+  .loading-screen .stamp{ width:44px; height:44px; font-size:16px; }
+  .loading-screen span{ color:var(--muted); font-size:13px; }
+
+  /* ---------- folder (home) view ---------- */
+  .folder-topbar{
+    background: rgba(245,240,228,0.92); backdrop-filter: blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .folder-topbar-inner{
+    max-width:1180px; margin:0 auto; padding:20px 24px;
+    display:flex; align-items:center;
+  }
+  .folder-title{ font-size:20px; font-weight:700; margin:0; }
+  .folder-wrap{ max-width:1180px; margin:0 auto; padding:30px 24px 60px; }
+  .folder-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:18px;
+  }
+  .folder-card{
+    position:relative; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:22px 18px 18px; box-shadow:var(--shadow);
+    cursor:pointer; transition: transform .15s, box-shadow .15s; margin-top:8px;
+  }
+  .folder-card::before{
+    content:""; position:absolute; top:-8px; left:18px; width:48px; height:14px;
+    background:var(--indigo); border-radius:6px 6px 0 0;
+  }
+  .folder-card:hover{ transform:translateY(-3px); box-shadow:0 10px 26px -10px rgba(38,34,31,0.35); border-color:var(--indigo-2); }
+  .folder-card-dup{
+    position:absolute; top:10px; right:38px; border:none; background:none; color:var(--muted);
+    font-size:13px; padding:4px 7px; border-radius:6px; line-height:1;
+  }
+  .folder-card-dup:hover{ color:var(--indigo); background:var(--surface-2); }
+  .folder-card-del{
+    position:absolute; top:10px; right:10px; border:none; background:none; color:var(--muted);
+    font-size:15px; padding:3px 7px; border-radius:6px; line-height:1;
+  }
+  .folder-card-del:hover{ color:var(--vermilion); background:var(--vermilion-soft); }
+  .folder-card-name{
+    font-family:'Shippori Mincho',serif; font-weight:600; font-size:16px; margin:2px 46px 10px 0;
+    word-break:break-word;
+  }
+  .folder-card-meta{ display:flex; gap:10px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); }
+  .folder-card-meta span{ font-family:'JetBrains Mono',monospace; }
+  .folder-add-card{
+    border:1.5px dashed var(--indigo-2); background:none; color:var(--indigo-2);
+    border-radius:var(--radius); display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:8px; padding:24px 18px; font-family:'Shippori Mincho',serif;
+    font-size:15px; min-height:118px; margin-top:8px;
+  }
+  .folder-add-card:hover{ background:var(--surface); box-shadow:var(--shadow); }
+  .folder-empty-hint{ color:var(--muted); font-size:13px; margin-bottom:18px; }
+
+  .icon-btn.back-btn{ margin-right:2px; }
+
+  /* ---------- custom confirm/alert modal (sandboxed iframes block native dialogs) ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(38,34,31,0.45); z-index:1000;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-box{
+    background:var(--surface); border-radius:var(--radius); padding:24px 22px;
+    max-width:360px; width:100%; box-shadow:0 24px 60px -14px rgba(38,34,31,0.55);
+  }
+  .modal-message{ font-size:14px; line-height:1.7; margin:0 0 20px; color:var(--ink); white-space:pre-line; }
+  .modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
+  .modal-btn{
+    padding:8px 18px; border-radius:8px; font-size:13px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink); cursor:pointer;
+  }
+  .modal-btn.modal-cancel:hover{ background:var(--surface); border-color:var(--indigo-2); }
+  .modal-btn.modal-confirm{ background:var(--vermilion); color:#fff; border-color:var(--vermilion); }
+  .modal-btn.modal-confirm:hover{ opacity:.9; }
+
+
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="stamp serif">旅</div>
+  <span>正在讀取你的行程資料…</span>
+</div>
+
+<div id="folderView" class="folder-view" style="display:none;">
+  <div class="folder-topbar">
+    <div class="folder-topbar-inner">
+      <div class="brand">
+        <div class="stamp serif">旅</div>
+        <h1 class="folder-title serif">我的行程資料夾</h1>
+      </div>
+    </div>
+  </div>
+  <div class="folder-wrap">
+    <div class="folder-grid" id="folderGrid"></div>
+  </div>
+</div>
+
+<div id="tripView" class="trip-view" style="display:none;">
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <button class="icon-btn back-btn" id="backToFoldersBtn" title="返回所有行程">←</button>
+      <div class="stamp serif">旅</div>
+      <input id="tripName" class="brand-title-input" value="旅程手帳" />
+    </div>
+    <div class="stats">
+      <button class="share-btn" id="shareLinkBtn" title="複製這個行程的連結（僅限同一台瀏覽器／裝置有效，資料只存在本機，不會同步到雲端或其他裝置）">🔗 複製連結</button>
+      <div class="stat-chip">天數 <b id="statDays">-</b></div>
+      <div class="stat-chip">人數 <b id="statPeople">-</b></div>
+      <div class="stat-chip budget">預算 <b id="statBudget">-</b></div>
+      <div class="stat-chip actual">實際 <b id="statActual">-</b></div>
+    </div>
+  </div>
+  <div class="day-nav-wrap">
+    <div class="day-nav-fade left"></div>
+    <div class="day-nav" id="dayNav"></div>
+    <div class="day-nav-fade right"></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="section-title">
+    <span class="num mono">01</span>
+    <h2>預算試算</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="budget-card">
+    <div class="budget-meta">
+      <div class="meta-field">
+        <label>出發日期</label>
+        <input id="startDateInput" type="date" class="date-meta-input" />
+      </div>
+      <div class="meta-field">
+        <label>回程日期</label>
+        <input id="endDateInput" type="date" class="date-meta-input" />
+      </div>
+      <div class="meta-field">
+        <label>天數</label>
+        <input id="metaDays" type="number" min="1" />
+      </div>
+      <div class="meta-field">
+        <label>人數</label>
+        <input id="metaPeople" type="number" min="1" />
+      </div>
+    </div>
+    <p class="meta-hint">選好出發／回程日期，天數與每天的日期會自動排好；直接改「天數」也會同步回程日期。</p>
+
+    <table class="budget">
+      <thead>
+        <tr>
+          <th style="width:26%">項目</th>
+          <th style="width:16%">計算方式</th>
+          <th style="width:16%">單價（每人）</th>
+          <th style="width:16%">小計（全部）</th>
+          <th style="width:6%"></th>
+        </tr>
+      </thead>
+      <tbody id="budgetBody"></tbody>
+      <tbody>
+        <tr class="row-total">
+          <td colspan="3">小計 Subtotal</td>
+          <td class="num" id="budgetTotalAll">-</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="add-cat-btn" id="addCategoryBtn">＋ 新增預算項目</button>
+  </div>
+
+  <div class="compare-strip">
+    <div class="compare-box budget">
+      <div class="label">預算總額</div>
+      <div class="value mono" id="cmpBudget">NT$ 0</div>
+      <div class="sub">依上方項目試算</div>
+    </div>
+    <div class="compare-box actual">
+      <div class="label">行程實際花費</div>
+      <div class="value mono" id="cmpActual">NT$ 0</div>
+      <div class="sub">加總下方每張行程卡片費用</div>
+    </div>
+    <div class="compare-box diff">
+      <div class="label">差額（預算－實際）</div>
+      <div class="value mono" id="cmpDiff">NT$ 0</div>
+      <div class="sub" id="cmpDiffSub">尚在預算內</div>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="num mono">02</span>
+    <h2>每日行程（可拖曳調整）</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div id="daysContainer"></div>
+
+  <div class="day-add-wrap">
+    <button class="add-day-btn serif" id="addDayBtn">＋ 新增一天</button>
+  </div>
+
+  <p class="footer-note">拖曳卡片左側「⋮⋮」把手可調整順序、跨時段或跨天移動。所有內容會自動儲存在這台瀏覽器裡，重新整理網頁也不會遺失；但目前不會同步到雲端或其他裝置。</p>
+</div>
+
+</div><!-- /#tripView -->
+
+<div class="save-indicator" id="saveIndicator">已儲存</div>
+
+<div class="modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="modal-box">
+    <p class="modal-message" id="modalMessage"></p>
+    <div class="modal-actions">
+      <button class="modal-btn modal-cancel" id="modalCancelBtn">取消</button>
+      <button class="modal-btn modal-confirm" id="modalConfirmBtn">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+(function(){
+  "use strict";
+
+  // ---------- Local storage persistence ----------
+  // Trip text data (itinerary, budget, etc.) is saved to this browser's
+  // localStorage. No network/cloud sync — the data lives only on this
+  // device/browser, but survives page refreshes and closing/reopening the tab.
+  const TRIP_DATA_PREFIX = "trip-data-v1-";
+  const INDEX_KEY = "trip-index-v1";
+
+  // ---------- IndexedDB: stores the actual bytes of every attachment ----------
+  // (images / PDFs / text files). IndexedDB has a much larger quota than
+  // localStorage (typically hundreds of MB+), so attachment content lives
+  // here; only lightweight metadata {id,name,kind,size} is kept in the trip's
+  // localStorage record.
+  const IDB_NAME = "travel-journal-files-v1";
+  const IDB_STORE = "files";
+  let idbPromise = null;
+
+  function getIDB(){
+    if(idbPromise) return idbPromise;
+    idbPromise = new Promise((resolve, reject)=>{
+      if(!window.indexedDB){ reject(new Error("IndexedDB not supported")); return; }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = ()=>{
+        const dbi = req.result;
+        if(!dbi.objectStoreNames.contains(IDB_STORE)){
+          dbi.createObjectStore(IDB_STORE, { keyPath: "id" });
+        }
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> reject(req.error);
+    });
+    return idbPromise;
+  }
+
+  // record shape: { id, kind: 'image'|'pdf'|'txt', content }
+  // content is a data URL for image/pdf, or a plain text string for txt.
+  async function idbPutFile(record){
+    const dbi = await getIDB();
+    return new Promise((resolve, reject)=>{
+      const tx = dbi.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(record);
+      tx.oncomplete = ()=> resolve(true);
+      tx.onerror = ()=> reject(tx.error);
+    });
+  }
+
+  async function idbGetFile(id){
+    const dbi = await getIDB();
+    return new Promise((resolve, reject)=>{
+      const tx = dbi.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(id);
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> reject(req.error);
+    });
+  }
+
+  async function idbDeleteFile(id){
+    const dbi = await getIDB();
+    return new Promise((resolve, reject)=>{
+      const tx = dbi.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).delete(id);
+      tx.oncomplete = ()=> resolve(true);
+      tx.onerror = ()=> reject(tx.error);
+    });
+  }
+
+  // small in-memory cache so re-rendering the same attachment list within a
+  // session doesn't have to hit storage again just to redraw a thumbnail.
+  const attachmentContentCache = new Map();
+
+  // ---------- fallback storage ----------
+  // Some environments (e.g. the page opened directly via file://, or a
+  // restrictive sandboxed embed) block or silently hang IndexedDB. To make
+  // sure uploads never just "disappear" with no feedback, we probe IndexedDB
+  // once (with a timeout so a hang can't freeze the upload forever) and, if
+  // it isn't usable, transparently fall back to storing each attachment's
+  // content under its own localStorage key instead.
+  let idbAvailable = null;
+  let fallbackNoticeShown = false;
+  const FALLBACK_PREFIX = "att-fallback-v1-";
+
+  function withTimeout(promise, ms, errMsg){
+    return Promise.race([
+      promise,
+      new Promise((_, reject)=> setTimeout(()=> reject(new Error(errMsg || "timeout")), ms))
+    ]);
+  }
+
+  async function ensureIdbReady(){
+    if(idbAvailable !== null) return idbAvailable;
+    try{
+      await withTimeout(getIDB(), 3000, "IndexedDB 開啟逾時");
+      idbAvailable = true;
+    }catch(e){
+      console.error("IndexedDB 無法使用，改用瀏覽器 localStorage 備援方式儲存檔案", e);
+      idbAvailable = false;
+      if(!fallbackNoticeShown){
+        fallbackNoticeShown = true;
+        showAlert("這個瀏覽器或開啟方式（例如直接用「開啟檔案」打開網頁）目前無法使用擴充儲存空間，已自動切換成備援模式。備援模式容量比較小，建議圖片/PDF 數量與大小盡量精簡，或改用網址（http/https）方式開啟這個頁面。");
+      }
+    }
+    return idbAvailable;
+  }
+
+  async function storeAttachmentContent(id, kind, content){
+    const ok = await ensureIdbReady();
+    if(ok){
+      await idbPutFile({ id, kind, content });
+      return;
+    }
+    localStorage.setItem(FALLBACK_PREFIX + id, JSON.stringify({ kind, content }));
+  }
+
+  async function fetchAttachmentContent(id){
+    const ok = await ensureIdbReady();
+    if(ok) return await idbGetFile(id);
+    try{
+      const raw = localStorage.getItem(FALLBACK_PREFIX + id);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){
+      console.error("備援讀取失敗", e);
+      return null;
+    }
+  }
+
+  async function removeAttachmentContent(id){
+    const ok = await ensureIdbReady();
+    if(ok){
+      try{ await idbDeleteFile(id); }catch(e){ console.error(e); }
+    }
+    try{ localStorage.removeItem(FALLBACK_PREFIX + id); }catch(e){ /* ignore */ }
+  }
+
+  async function loadAttachmentContent(id){
+    if(attachmentContentCache.has(id)) return attachmentContentCache.get(id);
+    const rec = await fetchAttachmentContent(id);
+    if(rec) attachmentContentCache.set(id, rec);
+    return rec;
+  }
+
+  // Deletes one or more attachments' content from wherever it's stored
+  // (IndexedDB and/or the localStorage fallback) and clears the local cache.
+  async function idbDeleteFiles(ids){
+    for(const id of (ids||[])){
+      try{ await removeAttachmentContent(id); }catch(e){ console.error("刪除本機檔案資料失敗", e); }
+      attachmentContentCache.delete(id);
+    }
+  }
+
+  const PERIODS = ["早上","下午","晚上"];
+  const CATEGORIES = ["交通","景點","餐廳","住宿","其他"];
+  const MODES = [
+    {v:"once", label:"一次性"},
+    {v:"perDay", label:"每人每天"},
+    {v:"perNight", label:"每人每晚"}
+  ];
+
+  let uid = 1;
+  function nid(prefix){ return prefix + "_" + (uid++) + "_" + Math.random().toString(36).slice(2,7); }
+
+  // A brand-new folder starts completely empty — no categories, one blank day.
+  function blankTripState(name){
+    return {
+      name: name || "未命名行程",
+      days: 1,
+      people: 1,
+      startDate: "",
+      endDate: "",
+      notes: "",
+      attachments: [],
+      categories: [
+        { id: nid("cat"), name:"機票", unitCost:0, mode:"once" },
+        { id: nid("cat"), name:"住宿", unitCost:0, mode:"perNight" },
+        { id: nid("cat"), name:"用餐", unitCost:0, mode:"perDay" },
+        { id: nid("cat"), name:"交通", unitCost:0, mode:"perDay" },
+        { id: nid("cat"), name:"門票", unitCost:0, mode:"perDay" }
+      ],
+      itinerary: [
+        { id: nid("day"), date:"", weekday:"", city:"", stay:{ name:"", cost:0, note:"" }, files:[], blocks:[] }
+      ]
+    };
+  }
+
+  // Ensures older saved trips (from before notes/attachments existed) get sane defaults.
+  function backfillTrip(trip){
+    if(typeof trip.notes !== "string") trip.notes = "";
+    if(!Array.isArray(trip.attachments)) trip.attachments = [];
+    (trip.itinerary||[]).forEach(day=>{
+      if(!day.stay) day.stay = { name:"", cost:0, note:"" };
+      if(!Array.isArray(day.files)) day.files = [];
+      (day.blocks||[]).forEach(b=>{
+        if(!Array.isArray(b.files)) b.files = [];
+      });
+    });
+    return trip;
+  }
+
+  // Older saves (before the IndexedDB migration) stored each image's full
+  // base64 data URL directly inside the attachment object. This moves any
+  // such leftover bytes into IndexedDB and strips them out of the JSON that
+  // lives in localStorage, so the trip's metadata stays lightweight.
+  async function migrateLegacyAttachmentList(list){
+    if(!Array.isArray(list)) return false;
+    let changed = false;
+    for(const att of list){
+      if(att && typeof att.dataUrl === "string" && !att.kind){
+        try{
+          await storeAttachmentContent(att.id, "image", att.dataUrl);
+        }catch(e){ console.error("搬移舊圖片資料失敗", e); }
+        att.kind = "image";
+        delete att.dataUrl;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  async function migrateLegacyTrip(trip){
+    let changed = false;
+    if(await migrateLegacyAttachmentList(trip.attachments)) changed = true;
+    for(const day of (trip.itinerary||[])){
+      if(await migrateLegacyAttachmentList(day.files)) changed = true;
+      for(const b of (day.blocks||[])){
+        if(await migrateLegacyAttachmentList(b.files)) changed = true;
+      }
+    }
+    return changed;
+  }
+
+  let state = null;          // the currently-open trip's data
+  let currentTripId = null;  // id of the currently-open trip
+  let tripIndex = [];        // lightweight list for the folder view: [{id, name, days, people, dateLabel, updatedAt}]
+  let saveTimer = null;
+
+  function fmtMoney(n){
+    n = Math.round(n || 0);
+    return "NT$ " + n.toLocaleString("en-US");
+  }
+
+  // ---------- persistence ----------
+  function indexEntryFrom(id, tripState){
+    return {
+      id,
+      name: tripState.name || "未命名行程",
+      days: tripState.days || 0,
+      people: tripState.people || 0,
+      dateLabel: (tripState.itinerary && tripState.itinerary[0] && tripState.itinerary[0].date) || tripState.startDate || "",
+      updatedAt: Date.now()
+    };
+  }
+
+  // The folder list ("which trips does this browser know about") lives in localStorage.
+  function loadTripIndex(){
+    try{
+      const raw = localStorage.getItem(INDEX_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed;
+      }
+    }catch(e){
+      console.error("讀取本機行程清單失敗", e);
+    }
+    return [];
+  }
+
+  function saveTripIndexLocal(){
+    try{
+      localStorage.setItem(INDEX_KEY, JSON.stringify(tripIndex));
+    }catch(e){
+      console.error("寫入本機行程清單失敗", e);
+    }
+  }
+
+  // Reads one trip's full data from localStorage.
+  async function loadTrip(id){
+    try{
+      const raw = localStorage.getItem(TRIP_DATA_PREFIX + id);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        if(parsed && Array.isArray(parsed.itinerary)){
+          const trip = backfillTrip(parsed);
+          const migrated = await migrateLegacyTrip(trip);
+          if(migrated){
+            try{ localStorage.setItem(TRIP_DATA_PREFIX + id, JSON.stringify(trip)); }
+            catch(e){ console.error("寫回搬移後的行程資料失敗", e); }
+          }
+          return trip;
+        }
+      }
+    }catch(e){
+      console.error("讀取行程資料失敗", e);
+      await showAlert("讀取行程資料失敗，本機儲存的資料可能已損毀。");
+    }
+    return blankTripState();
+  }
+
+  // Keeps the in-memory folder-list entry (name/days/people/date) accurate the
+  // instant something changes.
+  function syncIndexEntryNow(){
+    if(!currentTripId || !state) return;
+    const entry = tripIndex.find(t=>t.id===currentTripId);
+    if(!entry) return;
+    entry.name = state.name || "未命名行程";
+    entry.days = state.days || 0;
+    entry.people = state.people || 0;
+    entry.dateLabel = (state.itinerary[0] && state.itinerary[0].date) || state.startDate || "";
+    entry.updatedAt = Date.now();
+  }
+
+  function scheduleSave(){
+    syncIndexEntryNow();
+    saveTripIndexLocal();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 400);
+  }
+
+  async function saveState(){
+    if(!currentTripId || !state) return;
+    syncIndexEntryNow();
+    saveTripIndexLocal();
+    // Attachment bytes now live in IndexedDB, not here — this payload is just
+    // text/metadata, so it should stay tiny no matter how many files are attached.
+    const payload = JSON.stringify(state);
+    try{
+      localStorage.setItem(TRIP_DATA_PREFIX + currentTripId, payload);
+      flashSaved();
+    }catch(e){
+      console.error("儲存失敗", e);
+      flashSaveError("⚠ 儲存失敗，瀏覽器本機空間可能已滿");
+    }
+  }
+
+  let flashTimer = null;
+  function flashSaved(){
+    const el = document.getElementById("saveIndicator");
+    el.classList.remove("error");
+    el.textContent = "已儲存 · " + new Date().toLocaleTimeString("zh-TW", {hour:'2-digit', minute:'2-digit'});
+    el.classList.add("show");
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(()=> el.classList.remove("show"), 1600);
+  }
+
+  function flashSaveError(msg){
+    const el = document.getElementById("saveIndicator");
+    el.classList.add("error");
+    el.textContent = msg || "⚠ 儲存失敗，請檢查瀏覽器本機空間後再試一次";
+    el.classList.add("show");
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(()=> el.classList.remove("show"), 5000);
+  }
+
+  // ---------- custom confirm/alert (native browser dialogs are blocked in this sandboxed iframe) ----------
+  function showConfirm(message){
+    return new Promise(resolve=>{
+      const overlay = document.getElementById("modalOverlay");
+      document.getElementById("modalMessage").textContent = message;
+      const cancelBtn = document.getElementById("modalCancelBtn");
+      const confirmBtn = document.getElementById("modalConfirmBtn");
+      cancelBtn.style.display = "";
+      confirmBtn.textContent = "確定";
+      overlay.style.display = "flex";
+      function cleanup(result){
+        overlay.style.display = "none";
+        cancelBtn.removeEventListener("click", onCancel);
+        confirmBtn.removeEventListener("click", onConfirm);
+        overlay.removeEventListener("click", onOverlay);
+        resolve(result);
+      }
+      function onCancel(){ cleanup(false); }
+      function onConfirm(){ cleanup(true); }
+      function onOverlay(e){ if(e.target === overlay) cleanup(false); }
+      cancelBtn.addEventListener("click", onCancel);
+      confirmBtn.addEventListener("click", onConfirm);
+      overlay.addEventListener("click", onOverlay);
+    });
+  }
+
+  function showAlert(message){
+    return new Promise(resolve=>{
+      const overlay = document.getElementById("modalOverlay");
+      document.getElementById("modalMessage").textContent = message;
+      const cancelBtn = document.getElementById("modalCancelBtn");
+      const confirmBtn = document.getElementById("modalConfirmBtn");
+      cancelBtn.style.display = "none";
+      confirmBtn.textContent = "好的";
+      overlay.style.display = "flex";
+      function cleanup(){
+        overlay.style.display = "none";
+        confirmBtn.removeEventListener("click", onOk);
+        overlay.removeEventListener("click", onOverlay);
+        resolve();
+      }
+      function onOk(){ cleanup(); }
+      function onOverlay(e){ if(e.target === overlay) cleanup(); }
+      confirmBtn.addEventListener("click", onOk);
+      overlay.addEventListener("click", onOverlay);
+    });
+  }
+
+  // ---------- attachments (image / pdf / txt) ----------
+  // Images are downscaled + re-encoded as JPEG (still kept as a data URL) to
+  // save space; PDFs are read as-is into a data URL (can't be compressed);
+  // text files are read as plain text. The resulting "content" is stored in
+  // IndexedDB (see idbPutFile above) — only lightweight metadata
+  // {id, name, size, kind} ever touches localStorage.
+  function detectAttKind(file){
+    const name = (file.name || "").toLowerCase();
+    if(file.type && file.type.indexOf("image/") === 0) return "image";
+    if(file.type === "application/pdf" || name.endsWith(".pdf")) return "pdf";
+    if((file.type && file.type.indexOf("text/") === 0) || name.endsWith(".txt")) return "txt";
+    return null;
+  }
+
+  function fileToCompressedDataUrl(file, maxDim, quality){
+    maxDim = maxDim || 1280; quality = quality || 0.82;
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onerror = ()=> reject(new Error("read failed"));
+      reader.onload = ()=>{
+        const img = new Image();
+        img.onerror = ()=> reject(new Error("decode failed"));
+        img.onload = ()=>{
+          let w = img.width, h = img.height;
+          if(w > maxDim || h > maxDim){
+            if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
+            else{ w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function readFileAsDataURL(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onerror = ()=> reject(new Error("read failed"));
+      reader.onload = ()=> resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function readFileAsText(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onerror = ()=> reject(new Error("read failed"));
+      reader.onload = ()=> resolve(reader.result);
+      reader.readAsText(file);
+    });
+  }
+
+  function estimateContentKB(content){
+    if(typeof content !== "string") return 0;
+    const isDataUrl = content.indexOf("data:") === 0;
+    return Math.round((content.length * (isDataUrl ? 0.75 : 1)) / 1024);
+  }
+
+  // Reads (and compresses, for images) a FileList, stores each file's bytes in
+  // IndexedDB, and pushes lightweight metadata into targetArray. Calls onDone when finished.
+  async function addFilesToArray(fileList, targetArray, onDone){
+    const files = Array.from(fileList || []);
+    for(const file of files){
+      const kind = detectAttKind(file);
+      if(!kind){
+        await showAlert("「" + file.name + "」的檔案格式目前不支援，只能上傳圖片、PDF 或文字檔（.txt）。");
+        continue;
+      }
+      try{
+        let content;
+        if(kind === "image") content = await fileToCompressedDataUrl(file);
+        else if(kind === "pdf") content = await readFileAsDataURL(file);
+        else content = await readFileAsText(file);
+
+        const kb = estimateContentKB(content);
+        if(kb > 4000){
+          const ok = await showConfirm("「" + file.name + "」約 " + kb + "KB，檔案偏大，確定要加入嗎？");
+          if(!ok) continue;
+        }
+        const id = nid("att");
+        await storeAttachmentContent(id, kind, content);
+        targetArray.push({ id, name: file.name, size: kb, kind });
+      }catch(e){
+        console.error(e);
+        await showAlert("處理「" + file.name + "」時發生錯誤，請再試一次。");
+      }
+    }
+    onDone();
+  }
+
+  function renderAttachmentGrid(list, onRemove){
+    const grid = document.createElement("div");
+    grid.className = "attachment-grid";
+    list.forEach(att=>{
+      const thumb = document.createElement("div");
+      thumb.className = "attachment-thumb loading";
+
+      loadAttachmentContent(att.id).then(rec=>{
+        thumb.classList.remove("loading");
+        const kind = (rec && rec.kind) || att.kind || "image";
+        const content = rec ? rec.content : null;
+
+        if(!content){
+          thumb.textContent = "⚠";
+          thumb.title = "找不到這個檔案的內容，可能已被清除";
+          return;
+        }
+
+        if(kind === "image"){
+          const img = document.createElement("img");
+          img.src = content; img.alt = att.name; img.title = att.name;
+          img.addEventListener("click", ()=> openLightbox(content, att.name));
+          thumb.appendChild(img);
+        } else {
+          const tile = document.createElement("button");
+          tile.type = "button";
+          tile.className = "file-tile";
+          tile.title = att.name;
+          const icon = document.createElement("div");
+          icon.className = "file-tile-icon";
+          icon.textContent = kind === "pdf" ? "📄" : "📝";
+          const label = document.createElement("div");
+          label.className = "file-tile-name";
+          label.textContent = att.name;
+          tile.appendChild(icon); tile.appendChild(label);
+          tile.addEventListener("click", ()=>{
+            if(kind === "pdf") openPdfInNewTab(content, att.name);
+            else openTextPreview(content, att.name);
+          });
+          thumb.appendChild(tile);
+        }
+      }).catch(e=>{
+        console.error("讀取檔案內容失敗", e);
+        thumb.classList.remove("loading");
+        thumb.textContent = "⚠";
+      });
+
+      const del = document.createElement("button");
+      del.className = "attachment-del"; del.textContent = "×"; del.title = "刪除這個檔案";
+      del.addEventListener("click", (e)=>{ e.stopPropagation(); onRemove(att.id); });
+      thumb.appendChild(del);
+
+      grid.appendChild(thumb);
+    });
+    return grid;
+  }
+
+  function openLightbox(src, name){
+    const overlay = document.createElement("div");
+    overlay.className = "lightbox-overlay";
+    const box = document.createElement("div");
+    box.className = "lightbox-box";
+    const img = document.createElement("img");
+    img.src = src; img.alt = name || "";
+    const close = document.createElement("button");
+    close.className = "lightbox-close"; close.textContent = "×";
+    box.appendChild(img); box.appendChild(close);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function remove(){ overlay.remove(); }
+    overlay.addEventListener("click", (e)=>{ if(e.target === overlay) remove(); });
+    close.addEventListener("click", remove);
+  }
+
+  // Converts a PDF data URL to a Blob URL and opens it in a new tab (data:
+  // URLs can hit size/security limits when opened directly in some browsers).
+  function openPdfInNewTab(dataUrl, name){
+    try{
+      const commaIdx = dataUrl.indexOf(",");
+      const meta = dataUrl.slice(0, commaIdx);
+      const base64 = dataUrl.slice(commaIdx + 1);
+      const mimeMatch = meta.match(/data:(.*?);base64/);
+      const mime = mimeMatch ? mimeMatch[1] : "application/pdf";
+      const binary = atob(base64);
+      const arr = new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++) arr[i] = binary.charCodeAt(i);
+      const blob = new Blob([arr], { type: mime });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(()=> URL.revokeObjectURL(url), 60000);
+    }catch(e){
+      console.error("開啟 PDF 失敗", e);
+      window.open(dataUrl, "_blank");
+    }
+  }
+
+  // Shows a text file's content in a simple read-only preview modal.
+  function openTextPreview(text, name){
+    const overlay = document.createElement("div");
+    overlay.className = "block-editor-overlay";
+    const box = document.createElement("div");
+    box.className = "block-editor-box";
+    const header = document.createElement("div");
+    header.className = "block-editor-header";
+    header.textContent = name || "文字檔內容";
+    const pre = document.createElement("pre");
+    pre.className = "text-preview-pre";
+    pre.textContent = text;
+    const close = document.createElement("button");
+    close.className = "block-editor-close"; close.textContent = "關閉";
+    box.appendChild(header); box.appendChild(pre); box.appendChild(close);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    function remove(){ overlay.remove(); }
+    overlay.addEventListener("click", (e)=>{ if(e.target === overlay) remove(); });
+    close.addEventListener("click", remove);
+  }
+
+  // Per-block "備註/連結" editor: a bigger textarea + image attachments for one
+  // itinerary card (景點/交通/餐廳/住宿). onClose lets the card refresh its preview label.
+  function openBlockEditor(block, titleText, onClose){
+    if(!Array.isArray(block.files)) block.files = [];
+
+    const overlay = document.createElement("div");
+    overlay.className = "block-editor-overlay";
+    const box = document.createElement("div");
+    box.className = "block-editor-box";
+
+    const header = document.createElement("div");
+    header.className = "block-editor-header";
+    header.textContent = titleText || "備註與附件";
+    box.appendChild(header);
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "block-editor-textarea";
+    textarea.placeholder = "這個行程項目的備註、連結、注意事項……";
+    textarea.value = block.note || "";
+    textarea.addEventListener("input", ()=>{ block.note = textarea.value; scheduleSave(); });
+    box.appendChild(textarea);
+
+    const attWrap = document.createElement("div");
+    box.appendChild(attWrap);
+
+    function refreshAttachments(){
+      attWrap.innerHTML = "";
+      attWrap.appendChild(renderAttachmentGrid(block.files, async (attId)=>{
+        await idbDeleteFiles([attId]);
+        block.files = block.files.filter(f=>f.id!==attId);
+        refreshAttachments(); scheduleSave();
+      }));
+    }
+    refreshAttachments();
+
+    const addLabel = document.createElement("label");
+    addLabel.className = "attachment-add-btn";
+    addLabel.textContent = "＋ 上傳圖片／PDF／文字檔";
+    const fileInput = document.createElement("input");
+    fileInput.type = "file"; fileInput.accept = "image/*,application/pdf,.pdf,text/plain,.txt"; fileInput.multiple = true;
+    fileInput.style.display = "none";
+    fileInput.addEventListener("change", async (e)=>{
+      const files = e.target.files;
+      e.target.value = "";
+      if(!files || !files.length) return;
+      await addFilesToArray(files, block.files, ()=>{ refreshAttachments(); scheduleSave(); });
+    });
+    addLabel.appendChild(fileInput);
+    box.appendChild(addLabel);
+
+    const hint = document.createElement("p");
+    hint.className = "attachment-hint";
+    hint.textContent = "圖片會自動壓縮，檔案內容存在這台瀏覽器的本機資料庫（IndexedDB）裡，容量比之前大很多。";
+    box.appendChild(hint);
+
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "block-editor-close"; doneBtn.textContent = "完成";
+    box.appendChild(doneBtn);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function close(){
+      overlay.remove();
+      if(onClose) onClose();
+    }
+    doneBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target === overlay) close(); });
+  }
+
+  // ---------- date helpers ----------
+  const WEEKDAY_NAMES = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+
+
+
+  function parseISO(iso){ return new Date(iso + "T00:00:00"); }
+  function toISO(d){
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return y+"-"+m+"-"+day;
+  }
+  function toDisplayDate(d){
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return y+"/"+m+"/"+day;
+  }
+  function weekdayOf(d){ return WEEKDAY_NAMES[d.getDay()]; }
+
+  // Sets state.days to match the itinerary's current length, and refreshes endDate accordingly.
+  function daysBetweenISO(startISO, endISO){
+    return Math.round((parseISO(endISO) - parseISO(startISO)) / 86400000) + 1;
+  }
+
+  // Regenerates itinerary day count + each day's date/weekday to match state.startDate + state.days.
+  // Growing adds blank days at the end; shrinking asks for confirmation if it would delete content.
+  async function syncItineraryToDates(){
+    if(!state.startDate) return true;
+    const start = parseISO(state.startDate);
+    const targetDays = state.days;
+
+    if(state.itinerary.length > targetDays){
+      const removeCount = state.itinerary.length - targetDays;
+      const trailing = state.itinerary.slice(targetDays);
+      const hasContent = trailing.some(d => d.blocks.length > 0 || (d.city && d.city.trim()));
+      if(hasContent){
+        const ok = await showConfirm("新的天數比目前行程少，會刪除最後 " + removeCount + " 天已輸入的行程內容，確定要繼續嗎？");
+        if(!ok) return false;
+      }
+      state.itinerary = state.itinerary.slice(0, targetDays);
+    } else if(state.itinerary.length < targetDays){
+      const lastCity = state.itinerary.length ? state.itinerary[state.itinerary.length-1].city : "";
+      for(let i = state.itinerary.length; i < targetDays; i++){
+        state.itinerary.push({ id: nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:""}, files:[], blocks:[] });
+      }
+    }
+
+    state.itinerary.forEach((day, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      day.date = toDisplayDate(d);
+      day.weekday = weekdayOf(d);
+    });
+
+    const end = new Date(start);
+    end.setDate(end.getDate() + targetDays - 1);
+    state.endDate = toISO(end);
+    return true;
+  }
+
+  // Relabels existing itinerary days sequentially from state.startDate, without adding/removing days.
+  // Used after manually adding/removing a day card so dates stay contiguous.
+  function resequenceDates(){
+    state.days = state.itinerary.length;
+    if(!state.startDate) return;
+    const start = parseISO(state.startDate);
+    state.itinerary.forEach((day, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      day.date = toDisplayDate(d);
+      day.weekday = weekdayOf(d);
+    });
+    const end = new Date(start);
+    end.setDate(end.getDate() + state.days - 1);
+    state.endDate = toISO(end);
+  }
+
+  async function applyDateRange(startISO, endISO){
+    if(!startISO || !endISO) return;
+    const diff = daysBetweenISO(startISO, endISO);
+    if(diff < 1){
+      await showAlert("回程日期必須晚於或等於出發日期");
+      render();
+      return;
+    }
+    const prevStart = state.startDate, prevEnd = state.endDate, prevDays = state.days;
+    state.startDate = startISO;
+    state.endDate = endISO;
+    state.days = diff;
+    const ok = await syncItineraryToDates();
+    if(!ok){
+      state.startDate = prevStart; state.endDate = prevEnd; state.days = prevDays;
+    }
+    render();
+    scheduleSave();
+  }
+
+  // ---------- calculations ----------
+  function categorySubtotal(cat){
+    const days = Math.max(state.days||0, 0);
+    const nights = Math.max(days - 1, 0);
+    const people = Math.max(state.people||0, 0);
+    let mult = 1;
+    if(cat.mode === "perDay") mult = days;
+    else if(cat.mode === "perNight") mult = nights;
+    const perPerson = (cat.unitCost||0) * mult;
+    return perPerson * people;
+  }
+
+  function budgetTotal(){
+    return state.categories.reduce((s,c)=> s + categorySubtotal(c), 0);
+  }
+
+  function actualTotal(){
+    let total = 0;
+    state.itinerary.forEach(d => {
+      d.blocks.forEach(b => total += (Number(b.cost)||0));
+      if(d.stay) total += Number(d.stay.cost)||0;
+    });
+    return total;
+  }
+
+  // ---------- rendering ----------
+  function render(){
+    renderStats();
+    renderBudget();
+    renderDays();
+    renderDayNav();
+  }
+
+  function renderStats(){
+    document.getElementById("statDays").textContent = state.days;
+    document.getElementById("statPeople").textContent = state.people;
+    document.getElementById("statBudget").textContent = fmtMoney(budgetTotal());
+    document.getElementById("statActual").textContent = fmtMoney(actualTotal());
+    document.getElementById("tripName").value = state.name;
+    document.getElementById("metaDays").value = state.days;
+    document.getElementById("metaPeople").value = state.people;
+    document.getElementById("startDateInput").value = state.startDate || "";
+    document.getElementById("endDateInput").value = state.endDate || "";
+
+    const b = budgetTotal(), a = actualTotal();
+    document.getElementById("cmpBudget").textContent = fmtMoney(b);
+    document.getElementById("cmpActual").textContent = fmtMoney(a);
+    const diff = b - a;
+    document.getElementById("cmpDiff").textContent = (diff<0?"－":"") + fmtMoney(Math.abs(diff));
+    const sub = document.getElementById("cmpDiffSub");
+    sub.textContent = diff >= 0 ? "尚在預算內" : "已超出預算";
+    sub.style.color = diff >= 0 ? "var(--matcha)" : "var(--vermilion)";
+  }
+
+  function renderBudget(){
+    const body = document.getElementById("budgetBody");
+    body.innerHTML = "";
+    state.categories.forEach(cat=>{
+      const tr = document.createElement("tr");
+
+      const tdName = document.createElement("td");
+      const nameInput = document.createElement("input");
+      nameInput.type = "text"; nameInput.value = cat.name;
+      nameInput.addEventListener("input", ()=>{ cat.name = nameInput.value; scheduleSave(); });
+      tdName.appendChild(nameInput);
+
+      const tdMode = document.createElement("td");
+      const modeSel = document.createElement("select");
+      MODES.forEach(m=>{
+        const opt = document.createElement("option");
+        opt.value = m.v; opt.textContent = m.label;
+        if(cat.mode === m.v) opt.selected = true;
+        modeSel.appendChild(opt);
+      });
+      modeSel.addEventListener("change", ()=>{ cat.mode = modeSel.value; renderStats(); renderBudgetRowTotals(); scheduleSave(); });
+      tdMode.appendChild(modeSel);
+
+      const tdUnit = document.createElement("td"); tdUnit.className = "num";
+      const unitInput = document.createElement("input");
+      unitInput.type = "number"; unitInput.value = cat.unitCost;
+      unitInput.addEventListener("input", ()=>{ cat.unitCost = Number(unitInput.value)||0; renderStats(); updateRowSubtotal(tr, cat); scheduleSave(); });
+      tdUnit.appendChild(unitInput);
+
+      const tdSub = document.createElement("td"); tdSub.className = "num sub-cell mono";
+      tdSub.textContent = fmtMoney(categorySubtotal(cat));
+
+      const tdDel = document.createElement("td");
+      const delBtn = document.createElement("button");
+      delBtn.className = "del-row-btn"; delBtn.textContent = "×";
+      delBtn.title = "刪除此項目";
+      delBtn.addEventListener("click", ()=>{
+        state.categories = state.categories.filter(c=>c.id!==cat.id);
+        render(); scheduleSave();
+      });
+      tdDel.appendChild(delBtn);
+
+      tr.appendChild(tdName); tr.appendChild(tdMode); tr.appendChild(tdUnit); tr.appendChild(tdSub); tr.appendChild(tdDel);
+      body.appendChild(tr);
+    });
+    document.getElementById("budgetTotalAll").textContent = fmtMoney(budgetTotal());
+  }
+
+  function updateRowSubtotal(tr, cat){
+    const cell = tr.querySelector(".sub-cell");
+    if(cell) cell.textContent = fmtMoney(categorySubtotal(cat));
+    document.getElementById("budgetTotalAll").textContent = fmtMoney(budgetTotal());
+  }
+
+  function renderBudgetRowTotals(){
+    renderBudget();
+  }
+
+  function renderDayNav(){
+    const nav = document.getElementById("dayNav");
+    nav.innerHTML = "";
+    state.itinerary.forEach((d, i)=>{
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "day-nav-chip";
+      chip.dataset.dayId = d.id;
+      chip.innerHTML =
+        '<span class="day-num">Day ' + (i+1) + '</span>' +
+        '<span class="day-dot"></span>' +
+        '<span class="day-date">' + (d.date || "未設定日期") + '</span>';
+      chip.addEventListener("click", ()=>{
+        if(nav.dataset.dragged === "1") return;
+        jumpToDay(d.id);
+      });
+      nav.appendChild(chip);
+    });
+  }
+
+  function jumpToDay(dayId){
+    const el = document.querySelector('.day[data-day-id="' + dayId + '"]');
+    if(!el) return;
+    const topbar = document.querySelector(".topbar");
+    const topOffset = (topbar ? topbar.getBoundingClientRect().height : 130) + 16;
+    const targetY = window.pageYOffset + el.getBoundingClientRect().top - topOffset;
+    window.scrollTo({ top: Math.max(targetY, 0), behavior: "smooth" });
+    setActiveDayChip(dayId);
+  }
+
+  function setActiveDayChip(dayId){
+    document.querySelectorAll(".day-nav-chip").forEach(chip=>{
+      chip.classList.toggle("active", chip.dataset.dayId === dayId);
+    });
+  }
+
+  let dayObserver = null;
+  function setupDayObserver(){
+    if(dayObserver) dayObserver.disconnect();
+    const topbar = document.querySelector(".topbar");
+    const topOffset = topbar ? topbar.getBoundingClientRect().height + 10 : 140;
+    dayObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting) setActiveDayChip(entry.target.dataset.dayId);
+      });
+    }, { root:null, rootMargin: "-" + Math.round(topOffset) + "px 0px -70% 0px", threshold: 0 });
+    document.querySelectorAll(".day").forEach(el=> dayObserver.observe(el));
+  }
+
+  function bindDayNavScroll(){
+    const nav = document.getElementById("dayNav");
+    if(!nav || nav.dataset.scrollBound) return;
+    nav.dataset.scrollBound = "1";
+
+    // vertical wheel/trackpad input scrolls the day list horizontally
+    nav.addEventListener("wheel", (e)=>{
+      if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      nav.scrollLeft += e.deltaY;
+    }, { passive:false });
+
+    // click-and-drag (mouse or touch) to scroll — listens on window (not pointer
+    // capture) so a plain click on a chip still fires normally afterwards.
+    let isDown = false, startX = 0, startScroll = 0, moved = 0;
+
+    function onMove(e){
+      if(!isDown) return;
+      const dx = e.clientX - startX;
+      moved = Math.max(moved, Math.abs(dx));
+      nav.scrollLeft = startScroll - dx;
+    }
+    function onUp(){
+      if(!isDown) return;
+      isDown = false;
+      nav.classList.remove("grabbing");
+      nav.dataset.dragged = moved > 5 ? "1" : "0";
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      setTimeout(()=>{ nav.dataset.dragged = "0"; }, 50);
+    }
+
+    nav.addEventListener("pointerdown", (e)=>{
+      isDown = true; moved = 0;
+      startX = e.clientX; startScroll = nav.scrollLeft;
+      nav.classList.add("grabbing");
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    });
+  }
+
+  function renderDays(){
+    const container = document.getElementById("daysContainer");
+    container.innerHTML = "";
+    state.itinerary.forEach((day, idx)=>{
+      container.appendChild(renderDay(day, idx));
+    });
+    setupDayObserver();
+  }
+
+  function renderDay(day, idx){
+    if(!day.stay) day.stay = { name:"", cost:0, note:"" };
+    if(!Array.isArray(day.files)) day.files = [];
+
+    const wrap = document.createElement("div");
+    wrap.className = "day";
+    wrap.dataset.dayId = day.id;
+
+    const head = document.createElement("div");
+    head.className = "day-head";
+
+    const dayHandle = document.createElement("span");
+    dayHandle.className = "day-handle";
+    dayHandle.textContent = "⋮⋮";
+    dayHandle.title = "拖曳整天調整順序";
+    dayHandle.addEventListener("pointerdown", (e)=> startDayDrag(e, day, wrap));
+    head.appendChild(dayHandle);
+
+    const hanko = document.createElement("div");
+    hanko.className = "hanko serif";
+    hanko.textContent = idx+1;
+    head.appendChild(hanko);
+
+    const dateInput = document.createElement("input");
+    dateInput.className = "date-input"; dateInput.value = day.date || "";
+    dateInput.placeholder = "YYYY/MM/DD";
+    dateInput.addEventListener("input", ()=>{ day.date = dateInput.value; renderDayNav(); scheduleSave(); });
+    head.appendChild(dateInput);
+
+    const wdInput = document.createElement("input");
+    wdInput.className = "weekday-input"; wdInput.value = day.weekday || "";
+    wdInput.placeholder = "星期";
+    wdInput.addEventListener("input", ()=>{ day.weekday = wdInput.value; scheduleSave(); });
+    head.appendChild(wdInput);
+
+    const cityInput = document.createElement("input");
+    cityInput.className = "city-input"; cityInput.value = day.city || "";
+    cityInput.placeholder = "城市／地區";
+    cityInput.addEventListener("input", ()=>{ day.city = cityInput.value; scheduleSave(); });
+    head.appendChild(cityInput);
+
+    const actions = document.createElement("div");
+    actions.className = "day-actions";
+
+    const dupDayBtn = document.createElement("button");
+    dupDayBtn.className = "icon-btn"; dupDayBtn.textContent = "🗐"; dupDayBtn.title = "複製這一天";
+    dupDayBtn.addEventListener("click", async ()=>{
+      const pos = state.itinerary.findIndex(d=>d.id===day.id);
+      const clone = await cloneDayWithNewIds(day);
+      state.itinerary.splice(pos + 1, 0, clone);
+      resequenceDates();
+      render(); scheduleSave();
+    });
+    actions.appendChild(dupDayBtn);
+
+    const delDayBtn = document.createElement("button");
+    delDayBtn.className = "icon-btn"; delDayBtn.textContent = "×"; delDayBtn.title = "刪除這一天";
+    delDayBtn.addEventListener("click", async ()=>{
+      const ok = await showConfirm("確定要刪除「Day "+(idx+1)+"」的行程嗎？這也會一併刪除這一天上傳的圖片與檔案。");
+      if(ok){
+        const ids = [];
+        (day.files||[]).forEach(f=> ids.push(f.id));
+        (day.blocks||[]).forEach(b=> (b.files||[]).forEach(f=> ids.push(f.id)));
+        await idbDeleteFiles(ids);
+        state.itinerary = state.itinerary.filter(d=>d.id!==day.id);
+        resequenceDates();
+        render(); scheduleSave();
+      }
+    });
+    actions.appendChild(delDayBtn);
+    head.appendChild(actions);
+
+    wrap.appendChild(head);
+
+    const periods = document.createElement("div");
+    periods.className = "periods";
+
+    PERIODS.forEach(period=>{
+      periods.appendChild(renderPeriodColumn(day, period));
+    });
+
+    wrap.appendChild(periods);
+    wrap.appendChild(renderStayCard(day));
+    wrap.appendChild(renderDayFiles(day));
+    return wrap;
+  }
+
+  function renderDayFiles(day){
+    const bar = document.createElement("div");
+    bar.className = "day-files";
+
+    const label = document.createElement("span");
+    label.className = "day-files-label";
+    label.textContent = "📎 檔案";
+    bar.appendChild(label);
+
+    bar.appendChild(renderAttachmentGrid(day.files, async (attId)=>{
+      await idbDeleteFiles([attId]);
+      day.files = day.files.filter(f=>f.id!==attId);
+      renderDays(); scheduleSave();
+    }));
+
+    const inputId = "file-input-" + day.id;
+    const addLabel = document.createElement("label");
+    addLabel.className = "day-files-add";
+    addLabel.setAttribute("for", inputId);
+    addLabel.title = "上傳這一天要用的圖片／PDF／文字檔";
+    addLabel.textContent = "＋";
+    bar.appendChild(addLabel);
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file"; fileInput.id = inputId; fileInput.accept = "image/*,application/pdf,.pdf,text/plain,.txt";
+    fileInput.multiple = true; fileInput.style.display = "none";
+    fileInput.addEventListener("change", async (e)=>{
+      const files = e.target.files;
+      e.target.value = "";
+      if(!files || !files.length) return;
+      await addFilesToArray(files, day.files, ()=>{ renderDays(); scheduleSave(); });
+    });
+    bar.appendChild(fileInput);
+
+    return bar;
+  }
+
+  function renderStayCard(day){
+    const stay = day.stay;
+    const bar = document.createElement("div");
+    bar.className = "stay-card";
+
+    const label = document.createElement("span");
+    label.className = "stay-label";
+    label.textContent = "住宿";
+    bar.appendChild(label);
+
+    const nameInput = document.createElement("input");
+    nameInput.className = "stay-name-input";
+    nameInput.placeholder = "今晚住哪裡？（飯店／地區名稱）";
+    nameInput.value = stay.name || "";
+    nameInput.addEventListener("input", ()=>{ stay.name = nameInput.value; scheduleSave(); });
+    bar.appendChild(nameInput);
+
+    const costWrap = document.createElement("div");
+    costWrap.className = "stay-cost-wrap";
+    const costInput = document.createElement("input");
+    costInput.className = "stay-cost-input"; costInput.type = "number";
+    costInput.value = stay.cost || 0;
+    costInput.addEventListener("input", ()=>{ stay.cost = Number(costInput.value)||0; renderStats(); scheduleSave(); });
+    costWrap.appendChild(costInput);
+    const unit = document.createElement("span"); unit.className = "cost-unit"; unit.textContent = "元／晚";
+    costWrap.appendChild(unit);
+    bar.appendChild(costWrap);
+
+    const noteInput = document.createElement("input");
+    noteInput.className = "stay-note-input";
+    noteInput.placeholder = "備註／訂房連結";
+    noteInput.value = stay.note || "";
+    noteInput.addEventListener("input", ()=>{ stay.note = noteInput.value; scheduleSave(); });
+    bar.appendChild(noteInput);
+
+    return bar;
+  }
+
+  function renderPeriodColumn(day, period){
+    const col = document.createElement("div");
+    col.className = "period-col";
+    col.dataset.period = period;
+
+    const label = document.createElement("div");
+    label.className = "period-label";
+    label.innerHTML = '<span class="dot"></span>' + period;
+    col.appendChild(label);
+
+    const cardsWrap = document.createElement("div");
+    cardsWrap.className = "cards";
+    cardsWrap.dataset.dayId = day.id;
+    cardsWrap.dataset.period = period;
+
+    day.blocks.filter(b=>b.period===period).forEach(block=>{
+      cardsWrap.appendChild(renderCard(day, block));
+    });
+
+    col.appendChild(cardsWrap);
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "add-card-btn";
+    addBtn.textContent = "＋ 新增";
+    addBtn.addEventListener("click", ()=>{
+      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", title:"", cost:0, note:"", files:[] });
+      renderDays(); renderStats(); scheduleSave();
+      const newCardEl = document.querySelector('[data-block-id="'+day.blocks[day.blocks.length-1].id+'"] .title-input');
+      if(newCardEl) newCardEl.focus();
+    });
+    col.appendChild(addBtn);
+
+    return col;
+  }
+
+  function renderCard(day, block){
+    if(!Array.isArray(block.files)) block.files = [];
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.blockId = block.id;
+    card.dataset.dayId = day.id;
+
+    const top = document.createElement("div");
+    top.className = "card-top";
+
+    const handle = document.createElement("span");
+    handle.className = "handle";
+    handle.textContent = "⋮⋮";
+    handle.addEventListener("pointerdown", (e)=> startDrag(e, day, block, card));
+    top.appendChild(handle);
+
+    const catSel = document.createElement("select");
+    catSel.className = "cat-tag " + block.category;
+    CATEGORIES.forEach(c=>{
+      const opt = document.createElement("option");
+      opt.value = c; opt.textContent = c;
+      if(block.category === c) opt.selected = true;
+      catSel.appendChild(opt);
+    });
+    catSel.addEventListener("change", ()=>{
+      block.category = catSel.value;
+      catSel.className = "cat-tag " + block.category;
+      scheduleSave();
+    });
+    top.appendChild(catSel);
+
+    const timeInput = document.createElement("input");
+    timeInput.className = "time-input"; timeInput.value = block.time || "";
+    timeInput.placeholder = "時間";
+    timeInput.addEventListener("input", ()=>{ block.time = timeInput.value; scheduleSave(); });
+    top.appendChild(timeInput);
+
+    const dupBtn = document.createElement("button");
+    dupBtn.className = "card-dup"; dupBtn.textContent = "🗐"; dupBtn.title = "複製這張小卡";
+    dupBtn.addEventListener("click", async ()=>{
+      const pos = day.blocks.findIndex(b=>b.id===block.id);
+      const clone = await cloneBlockWithNewIds(block);
+      day.blocks.splice(pos + 1, 0, clone);
+      renderDays(); renderStats(); scheduleSave();
+    });
+    top.appendChild(dupBtn);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "card-del"; delBtn.textContent = "×";
+    delBtn.addEventListener("click", async ()=>{
+      await idbDeleteFiles((block.files||[]).map(f=>f.id));
+      day.blocks = day.blocks.filter(b=>b.id!==block.id);
+      renderDays(); renderStats(); scheduleSave();
+    });
+    top.appendChild(delBtn);
+
+    card.appendChild(top);
+
+    const titleInput = document.createElement("input");
+    titleInput.className = "title-input"; titleInput.value = block.title || "";
+    titleInput.placeholder = "行程內容…";
+    titleInput.addEventListener("input", ()=>{ block.title = titleInput.value; scheduleSave(); });
+    card.appendChild(titleInput);
+
+    const bottom = document.createElement("div");
+    bottom.className = "card-bottom";
+
+    const costWrap = document.createElement("div");
+    costWrap.className = "cost-wrap";
+    const costInput = document.createElement("input");
+    costInput.className = "cost-input"; costInput.type = "number"; costInput.value = block.cost || 0;
+    costInput.addEventListener("input", ()=>{ block.cost = Number(costInput.value)||0; renderStats(); scheduleSave(); });
+    costWrap.appendChild(costInput);
+    const unit = document.createElement("span"); unit.className = "cost-unit"; unit.textContent = "元";
+    costWrap.appendChild(unit);
+    bottom.appendChild(costWrap);
+
+    const noteBtn = document.createElement("button");
+    noteBtn.type = "button";
+    noteBtn.className = "card-note-btn";
+    function refreshNoteBtn(){
+      const hasNote = block.note && block.note.trim();
+      const fileCount = block.files.length;
+      let label = hasNote ? block.note.trim() : "備註／連結";
+      if(fileCount > 0) label += "  📎" + fileCount;
+      noteBtn.textContent = label;
+      noteBtn.classList.toggle("has-content", !!(hasNote || fileCount));
+    }
+    refreshNoteBtn();
+    noteBtn.addEventListener("click", ()=>{
+      openBlockEditor(block, block.title || "備註與附件", refreshNoteBtn);
+    });
+    bottom.appendChild(noteBtn);
+
+    card.appendChild(bottom);
+
+    return card;
+  }
+
+  // ---------- drag & drop (pointer events, works on touch + mouse) ----------
+  let dragCtx = null;
+
+  function startDrag(e, day, block, cardEl){
+    e.preventDefault();
+    const rect = cardEl.getBoundingClientRect();
+    const ghost = cardEl.cloneNode(true);
+    ghost.classList.add("drag-ghost");
+    ghost.style.width = rect.width + "px";
+    ghost.style.left = rect.left + "px";
+    ghost.style.top = rect.top + "px";
+    document.body.appendChild(ghost);
+
+    cardEl.classList.add("dragging");
+
+    dragCtx = {
+      block, day, cardEl, ghost,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      startX: e.clientX, startY: e.clientY
+    };
+
+    window.addEventListener("pointermove", onDragMove);
+    window.addEventListener("pointerup", onDragEnd);
+  }
+
+  function onDragMove(e){
+    if(!dragCtx) return;
+    dragCtx.ghost.style.left = (e.clientX - dragCtx.offsetX) + "px";
+    dragCtx.ghost.style.top = (e.clientY - dragCtx.offsetY) + "px";
+    dragCtx.ghost.style.display = "none";
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    dragCtx.ghost.style.display = "";
+    if(!under) return;
+    const cardsWrap = under.closest(".cards");
+    clearPlaceholders();
+    if(cardsWrap){
+      const targetCard = under.closest(".card");
+      const placeholder = document.createElement("div");
+      placeholder.className = "placeholder-slot";
+      if(targetCard && targetCard.parentElement === cardsWrap && targetCard !== dragCtx.cardEl){
+        const tRect = targetCard.getBoundingClientRect();
+        const before = e.clientY < tRect.top + tRect.height/2;
+        cardsWrap.insertBefore(placeholder, before ? targetCard : targetCard.nextSibling);
+      } else {
+        cardsWrap.appendChild(placeholder);
+      }
+      dragCtx.dropWrap = cardsWrap;
+    } else {
+      dragCtx.dropWrap = null;
+    }
+  }
+
+  function clearPlaceholders(){
+    document.querySelectorAll(".placeholder-slot").forEach(p=>p.remove());
+  }
+
+  function onDragEnd(e){
+    if(!dragCtx) return;
+    window.removeEventListener("pointermove", onDragMove);
+    window.removeEventListener("pointerup", onDragEnd);
+
+    const { block, day, cardEl, ghost, dropWrap } = dragCtx;
+    ghost.remove();
+    cardEl.classList.remove("dragging");
+
+    if(dropWrap){
+      const newDayId = dropWrap.dataset.dayId;
+      const newPeriod = dropWrap.dataset.period;
+      const newDay = state.itinerary.find(d=>d.id===newDayId);
+
+      // figure out insertion index among real cards (excluding the dragged card + placeholder)
+      const placeholder = dropWrap.querySelector(".placeholder-slot");
+      let insertIndex = 0;
+      if(placeholder){
+        for(const child of Array.from(dropWrap.children)){
+          if(child === placeholder) break;
+          if(child.classList.contains("card") && child.dataset.blockId !== block.id){
+            insertIndex++;
+          }
+        }
+      }
+
+      // remove block from its current day (mutates the shared day object if newDay === day)
+      day.blocks = day.blocks.filter(b=>b.id!==block.id);
+      block.period = newPeriod;
+
+      const periodBlocks = newDay.blocks.filter(b=>b.period===newPeriod);
+      const otherBlocks = newDay.blocks.filter(b=>b.period!==newPeriod);
+      periodBlocks.splice(insertIndex, 0, block);
+      newDay.blocks = otherBlocks.concat(periodBlocks);
+    }
+
+    clearPlaceholders();
+    dragCtx = null;
+    renderDays();
+    renderStats();
+    scheduleSave();
+  }
+
+  // ---------- whole-day drag & drop ----------
+  // Dragging a day card to a new position moves its content (city, blocks, stay) there;
+  // since each day's date/weekday is always derived from its position + startDate,
+  // the day left behind simply "inherits" whatever date that slot now represents.
+  let dayDragCtx = null;
+
+  function startDayDrag(e, day, dayEl){
+    e.preventDefault();
+    const idx = state.itinerary.findIndex(d=>d.id===day.id);
+    const rect = dayEl.getBoundingClientRect();
+
+    const ghost = document.createElement("div");
+    ghost.className = "day-drag-ghost serif";
+    ghost.style.width = Math.min(rect.width, 320) + "px";
+    ghost.style.left = rect.left + "px";
+    ghost.style.top = rect.top + "px";
+    const label = "Day " + (idx+1) + (day.date ? " ・ " + day.date : "") + (day.city ? "　" + day.city : "");
+    ghost.textContent = label;
+    document.body.appendChild(ghost);
+
+    dayEl.classList.add("day-dragging-source");
+
+    dayDragCtx = {
+      day, dayEl, ghost,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top
+    };
+
+    window.addEventListener("pointermove", onDayDragMove);
+    window.addEventListener("pointerup", onDayDragEnd);
+  }
+
+  function clearDayPlaceholder(){
+    document.querySelectorAll(".day-placeholder").forEach(p=>p.remove());
+  }
+
+  function onDayDragMove(e){
+    if(!dayDragCtx) return;
+    dayDragCtx.ghost.style.left = (e.clientX - dayDragCtx.offsetX) + "px";
+    dayDragCtx.ghost.style.top = (e.clientY - dayDragCtx.offsetY) + "px";
+
+    dayDragCtx.ghost.style.display = "none";
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    dayDragCtx.ghost.style.display = "";
+
+    clearDayPlaceholder();
+    const container = document.getElementById("daysContainer");
+    if(!under) return;
+
+    const targetDay = under.closest(".day");
+    const placeholder = document.createElement("div");
+    placeholder.className = "day-placeholder";
+
+    if(targetDay && targetDay !== dayDragCtx.dayEl && targetDay.parentElement === container){
+      const tRect = targetDay.getBoundingClientRect();
+      const before = e.clientY < tRect.top + tRect.height/2;
+      container.insertBefore(placeholder, before ? targetDay : targetDay.nextSibling);
+    } else if(under === container || container.contains(under)){
+      container.appendChild(placeholder);
+    }
+  }
+
+  function onDayDragEnd(e){
+    if(!dayDragCtx) return;
+    window.removeEventListener("pointermove", onDayDragMove);
+    window.removeEventListener("pointerup", onDayDragEnd);
+
+    const { day, dayEl, ghost } = dayDragCtx;
+    ghost.remove();
+    dayEl.classList.remove("day-dragging-source");
+
+    const container = document.getElementById("daysContainer");
+    const placeholder = container.querySelector(".day-placeholder");
+    if(placeholder){
+      let newIndex = 0;
+      for(const child of Array.from(container.children)){
+        if(child === placeholder) break;
+        if(child.classList.contains("day") && child !== dayEl) newIndex++;
+      }
+      const oldIndex = state.itinerary.findIndex(d=>d.id===day.id);
+      if(oldIndex !== -1 && oldIndex !== newIndex){
+        state.itinerary.splice(oldIndex, 1);
+        state.itinerary.splice(newIndex, 0, day);
+        resequenceDates();
+      }
+    }
+
+    clearDayPlaceholder();
+    dayDragCtx = null;
+    render();
+    scheduleSave();
+  }
+
+  // ---------- global controls ----------
+  function bindGlobalControls(){
+    document.getElementById("tripName").addEventListener("input", (e)=>{
+      state.name = e.target.value; document.title = state.name + "｜行程手帳"; scheduleSave();
+    });
+
+    document.getElementById("metaDays").addEventListener("change", async (e)=>{
+      const v = Math.max(1, Number(e.target.value)||1);
+      const prevDays = state.days;
+      state.days = v;
+      if(state.startDate){
+        const ok = await syncItineraryToDates();
+        if(!ok) state.days = prevDays;
+      }
+      render(); scheduleSave();
+    });
+    document.getElementById("metaPeople").addEventListener("input", (e)=>{
+      state.people = Math.max(1, Number(e.target.value)||1);
+      renderStats(); renderBudget(); scheduleSave();
+    });
+
+    document.getElementById("startDateInput").addEventListener("change", (e)=>{
+      const val = e.target.value;
+      if(!val) return;
+      let endISO = state.endDate;
+      if(!endISO || parseISO(endISO) < parseISO(val)){
+        const d = parseISO(val);
+        d.setDate(d.getDate() + Math.max(state.days,1) - 1);
+        endISO = toISO(d);
+      }
+      applyDateRange(val, endISO);
+    });
+    document.getElementById("endDateInput").addEventListener("change", (e)=>{
+      const val = e.target.value;
+      if(!val) return;
+      const startISO = state.startDate || val;
+      applyDateRange(startISO, val);
+    });
+
+    document.getElementById("addCategoryBtn").addEventListener("click", ()=>{
+      state.categories.push({ id:nid("cat"), name:"新項目", unitCost:0, mode:"perDay" });
+      render(); scheduleSave();
+    });
+
+    document.getElementById("addDayBtn").addEventListener("click", ()=>{
+      state.itinerary.push({ id:nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:""}, files:[], blocks:[] });
+      resequenceDates();
+      render(); scheduleSave();
+      const els = document.querySelectorAll(".day");
+      if(els.length) els[els.length-1].scrollIntoView({behavior:"smooth", block:"start"});
+    });
+
+    document.getElementById("shareLinkBtn").addEventListener("click", async ()=>{
+      if(!currentTripId) return;
+      const url = new URL(window.location.href);
+      url.searchParams.set("trip", currentTripId);
+      const linkText = url.toString();
+      try{
+        await navigator.clipboard.writeText(linkText);
+        await showAlert("連結已複製！\n注意：資料只儲存在這台瀏覽器（本機），在其他裝置或瀏覽器開啟這個連結不會看到相同內容。");
+      }catch(e){
+        await showAlert("無法自動複製，請手動複製以下連結（注意：資料只存在這台瀏覽器本機）：\n" + linkText);
+      }
+    });
+  }
+
+  // ---------- folder (home) view ----------
+  function showFolderView(show){ document.getElementById("folderView").style.display = show ? "" : "none"; }
+  function showTripView(show){ document.getElementById("tripView").style.display = show ? "" : "none"; }
+
+  function renderFolderGrid(){
+    const grid = document.getElementById("folderGrid");
+    grid.innerHTML = "";
+
+    tripIndex.forEach(entry=>{
+      const card = document.createElement("div");
+      card.className = "folder-card";
+
+      const dupBtn = document.createElement("button");
+      dupBtn.className = "folder-card-dup";
+      dupBtn.textContent = "🗐";
+      dupBtn.title = "複製這個行程";
+      dupBtn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        duplicateTrip(entry.id, entry.name);
+      });
+      card.appendChild(dupBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "folder-card-del";
+      delBtn.textContent = "×";
+      delBtn.title = "刪除這個行程";
+      delBtn.addEventListener("click", (e)=>{
+        e.stopPropagation();
+        deleteTrip(entry.id, entry.name);
+      });
+      card.appendChild(delBtn);
+
+      const name = document.createElement("div");
+      name.className = "folder-card-name";
+      name.textContent = entry.name || "未命名行程";
+      card.appendChild(name);
+
+      const meta = document.createElement("div");
+      meta.className = "folder-card-meta";
+      meta.innerHTML =
+        "<span>" + (entry.days||0) + " 天</span>" +
+        "<span>" + (entry.people||0) + " 人</span>" +
+        (entry.dateLabel ? "<span>" + entry.dateLabel + "</span>" : "");
+      card.appendChild(meta);
+
+      card.addEventListener("click", ()=> openTrip(entry.id));
+      grid.appendChild(card);
+    });
+
+    const addCard = document.createElement("button");
+    addCard.className = "folder-add-card";
+    addCard.innerHTML = "<span style='font-size:22px;line-height:1;'>＋</span><span>新增行程資料夾</span>";
+    addCard.addEventListener("click", createNewTrip);
+    grid.appendChild(addCard);
+  }
+
+  async function createNewTrip(){
+    const id = nid("trip");
+    const blank = blankTripState("未命名行程 " + (tripIndex.length + 1));
+    tripIndex.push(indexEntryFrom(id, blank));
+    saveTripIndexLocal();
+    renderFolderGrid();
+    try{
+      localStorage.setItem(TRIP_DATA_PREFIX + id, JSON.stringify(blank));
+    }catch(e){
+      console.error("新增行程失敗", e);
+      await showAlert("新增行程時發生錯誤，瀏覽器本機空間可能已滿。");
+    }
+  }
+
+  // Copies a list of attachments to brand-new ids, including their actual
+  // bytes in IndexedDB (not just the metadata) so the clone is independent.
+  async function cloneAttachmentList(list){
+    const result = [];
+    for(const att of (list||[])){
+      const newId = nid("att");
+      try{
+        const rec = await loadAttachmentContent(att.id);
+        if(rec) await storeAttachmentContent(newId, rec.kind, rec.content);
+      }catch(e){ console.error("複製檔案內容失敗", e); }
+      result.push(Object.assign({}, att, { id: newId }));
+    }
+    return result;
+  }
+
+  // Deep-clones a single itinerary block (景點/交通/餐廳/住宿 card) and regenerates its ids.
+  async function cloneBlockWithNewIds(block){
+    const clone = JSON.parse(JSON.stringify(block));
+    clone.id = nid("c");
+    clone.files = await cloneAttachmentList(clone.files);
+    return clone;
+  }
+
+  // Deep-clones a single day and regenerates its internal ids (blocks + files).
+  async function cloneDayWithNewIds(day){
+    const clone = JSON.parse(JSON.stringify(day));
+    clone.id = nid("day");
+    const newBlocks = [];
+    for(const b of (clone.blocks||[])){
+      b.id = nid("c");
+      b.files = await cloneAttachmentList(b.files);
+      newBlocks.push(b);
+    }
+    clone.blocks = newBlocks;
+    clone.files = await cloneAttachmentList(clone.files);
+    return clone;
+  }
+
+  // Deep-clones a trip and regenerates every internal id so it's fully independent
+  // from the original (categories, days, blocks, and every level of attachments).
+  async function cloneTripWithNewIds(trip){
+    const clone = JSON.parse(JSON.stringify(trip));
+    (clone.categories||[]).forEach(c=>{ c.id = nid("cat"); });
+    clone.attachments = await cloneAttachmentList(clone.attachments);
+    const newItinerary = [];
+    for(const day of (clone.itinerary||[])){
+      day.id = nid("day");
+      const newBlocks = [];
+      for(const b of (day.blocks||[])){
+        b.id = nid("c");
+        b.files = await cloneAttachmentList(b.files);
+        newBlocks.push(b);
+      }
+      day.blocks = newBlocks;
+      day.files = await cloneAttachmentList(day.files);
+      newItinerary.push(day);
+    }
+    clone.itinerary = newItinerary;
+    return clone;
+  }
+
+  // Collects every attachment id referenced anywhere in a trip (trip-level,
+  // per-day, and per-card), used when wiping a trip's IndexedDB records.
+  function collectTripAttachmentIds(trip){
+    const ids = [];
+    (trip.attachments||[]).forEach(a=> ids.push(a.id));
+    (trip.itinerary||[]).forEach(day=>{
+      (day.files||[]).forEach(f=> ids.push(f.id));
+      (day.blocks||[]).forEach(b=> (b.files||[]).forEach(f=> ids.push(f.id)));
+    });
+    return ids;
+  }
+
+  async function duplicateTrip(id, name){
+    const original = await loadTrip(id);
+    const clone = backfillTrip(await cloneTripWithNewIds(original));
+    clone.name = (name || original.name || "未命名行程") + "（複製）";
+    const newId = nid("trip");
+    tripIndex.push(indexEntryFrom(newId, clone));
+    saveTripIndexLocal();
+    renderFolderGrid();
+    try{
+      localStorage.setItem(TRIP_DATA_PREFIX + newId, JSON.stringify(clone));
+    }catch(e){ console.error("複製行程失敗", e); }
+  }
+
+  async function deleteTrip(id, name){
+    const ok = await showConfirm("確定要刪除「" + (name || "這個行程") + "」嗎？此動作無法復原，包含所有已上傳的圖片與檔案。");
+    if(!ok) return;
+    tripIndex = tripIndex.filter(t=>t.id!==id);
+    saveTripIndexLocal();
+    renderFolderGrid();
+    try{
+      const trip = await loadTrip(id);
+      await idbDeleteFiles(collectTripAttachmentIds(trip));
+    }catch(e){ console.error("清除附件失敗", e); }
+    try{
+      localStorage.removeItem(TRIP_DATA_PREFIX + id);
+    }catch(e){ console.error("刪除行程失敗", e); }
+  }
+
+  async function openTrip(id){
+    state = await loadTrip(id);
+    currentTripId = id;
+    document.title = (state.name || "旅程手帳") + "｜行程手帳";
+    const url = new URL(window.location.href);
+    url.searchParams.set("trip", id);
+    window.history.replaceState({}, "", url);
+    showFolderView(false);
+    showTripView(true);
+    window.scrollTo(0,0);
+    render();
+  }
+
+  function backToFolders(){
+    clearTimeout(saveTimer);
+    if(currentTripId) saveState();
+    currentTripId = null;
+    state = null;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("trip");
+    window.history.replaceState({}, "", url);
+    showTripView(false);
+    showFolderView(true);
+    renderFolderGrid();
+  }
+
+  // ---------- init ----------
+  async function init(){
+    tripIndex = loadTripIndex();
+    bindGlobalControls();
+    bindDayNavScroll();
+    document.getElementById("backToFoldersBtn").addEventListener("click", backToFolders);
+
+    // If opened via a link (?trip=xxxx) that this browser has data for, jump
+    // straight into that trip.
+    const params = new URLSearchParams(window.location.search);
+    const sharedId = params.get("trip");
+    if(sharedId){
+      if(!tripIndex.find(t=>t.id===sharedId)){
+        const loaded = await loadTrip(sharedId);
+        tripIndex.push(indexEntryFrom(sharedId, loaded));
+        saveTripIndexLocal();
+      }
+      document.getElementById("loadingScreen").style.display = "none";
+      await openTrip(sharedId);
+      return;
+    }
+
+    renderFolderGrid();
+    showTripView(false);
+    showFolderView(true);
+    document.getElementById("loadingScreen").style.display = "none";
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
