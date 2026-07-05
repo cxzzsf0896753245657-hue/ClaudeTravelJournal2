@@ -775,7 +775,7 @@
   // Supabase 設定 —— 換成你自己 Project Settings -> API 裡的值
   // =====================================================================
   const SUPABASE_URL = "https://imsfvjnabwzdqohnfxsi.supabase.co"; // TODO: 換成你的 Project URL
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imltc2Z2am5hYnd6ZHFvaG5meHNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzg5OTQsImV4cCI6MjA5ODc1NDk5NH0.unHyBYKSRgyADfnoPX0PH4RhcAYDS4G4flRc4VGjAso";              // TODO: 換成你的 anon public key
+  const SUPABASE_ANON_KEY = "sb_publishable_EAGhP9Bhd-liW_ecfMV03g_5QkNVO4W";              // TODO: 換成你的 anon public key
   const ATTACHMENT_BUCKET = "attachments";                       // 對應你在 Storage 建立的 bucket 名稱
 
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1177,9 +1177,9 @@
     fileInput.type = "file"; fileInput.accept = "image/*,application/pdf,.pdf,text/plain,.txt"; fileInput.multiple = true;
     fileInput.style.display = "none";
     fileInput.addEventListener("change", async (e)=>{
-      const files = e.target.files;
+      const files = Array.from(e.target.files || []);
       e.target.value = "";
-      if(!files || !files.length) return;
+      if(!files.length) return;
       await addFilesToArray(files, block.files, ()=>{ refreshAttachments(); scheduleSave(); });
     });
     addLabel.appendChild(fileInput);
@@ -1740,9 +1740,9 @@
     fileInput.type = "file"; fileInput.id = inputId; fileInput.accept = "image/*,application/pdf,.pdf,text/plain,.txt";
     fileInput.multiple = true; fileInput.style.display = "none";
     fileInput.addEventListener("change", async (e)=>{
-      const files = e.target.files;
+      const files = Array.from(e.target.files || []);
       e.target.value = "";
-      if(!files || !files.length) return;
+      if(!files.length) return;
       await addFilesToArray(files, day.files, ()=>{ renderDays(); scheduleSave(); });
     });
     bar.appendChild(fileInput);
