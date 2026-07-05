@@ -477,7 +477,8 @@
   }
   .block-editor-box{
     background:var(--surface); border-radius:var(--radius); padding:22px; max-width:420px; width:100%;
-    box-shadow:0 24px 60px -14px rgba(38,34,31,0.55); max-height:86vh; overflow-y:auto;
+    box-shadow:0 24px 60px -14px rgba(38,34,31,0.55); max-height:86vh; overflow-y:auto; overflow-x:hidden;
+    min-width:0; box-sizing:border-box;
   }
   .block-editor-header{
     font-family:'Shippori Mincho',serif; font-weight:600; font-size:15px; margin-bottom:12px; color:var(--ink);
@@ -566,6 +567,29 @@
     .card{ padding:10px; }
     .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 -6px; padding:0 6px; }
     .table-scroll table.budget{ min-width:520px; }
+
+    /* 備註與附件彈窗（block editor）在手機上加大字體與間距，避免看不清楚 */
+    .block-editor-overlay{ padding:12px; }
+    .block-editor-box{
+      width:calc(100vw - 24px);
+      max-width:calc(100vw - 24px);
+      min-width:0;
+      padding:18px 16px;
+      overflow-x:hidden;
+      box-sizing:border-box;
+    }
+    .block-editor-header{ font-size:16px; overflow-wrap:anywhere; margin-bottom:14px; }
+    .block-editor-textarea{ font-size:15px; min-height:100px; width:100%; box-sizing:border-box; }
+    .attachment-grid{ gap:12px; max-width:100%; }
+    .attachment-thumb{ width:96px; height:96px; flex-shrink:0; }
+    .file-tile .file-tile-icon{ font-size:24px; }
+    .file-tile .file-tile-name{ font-size:11px; -webkit-line-clamp:2; overflow-wrap:anywhere; }
+    .attachment-del{ width:24px; height:24px; font-size:14px; }
+    .attachment-add-btn{ width:100%; max-width:100%; box-sizing:border-box; justify-content:center; padding:12px 14px; font-size:14px; }
+    .attachment-hint{ font-size:12.5px; line-height:1.6; overflow-wrap:anywhere; }
+    .block-editor-close{ padding:13px; font-size:15px; width:100%; box-sizing:border-box; }
+    .card-note-btn{ font-size:12.5px; }
+    .card-bottom{ gap:8px; }
   }
   .folder-title{ font-size:20px; font-weight:700; margin:0; }
   .folder-wrap{ max-width:1180px; margin:0 auto; padding:30px 24px 60px; }
