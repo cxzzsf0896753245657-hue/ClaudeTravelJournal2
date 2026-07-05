@@ -334,6 +334,27 @@
   .stay-note-btn.has-content{ color:var(--ochre); font-weight:500; }
   .stay-card.has-pending-todo{ box-shadow: inset 3px 0 0 var(--vermilion); }
 
+  .stay-extra{
+    display:flex; align-items:center; gap:14px 18px; flex-wrap:wrap; width:100%;
+    margin-top:2px; padding-top:10px; border-top:1px dashed rgba(138,128,114,0.35);
+  }
+  .stay-check{
+    display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); cursor:pointer; user-select:none;
+  }
+  .stay-check input[type="checkbox"]{ width:15px; height:15px; accent-color:var(--ochre); cursor:pointer; flex-shrink:0; }
+  .stay-check-sub{
+    border:none; border-bottom:1px solid var(--line); background:transparent; font-size:11.5px;
+    padding:2px 2px; outline:none; width:132px; color:var(--ink);
+  }
+  .stay-check-sub:focus{ border-color:var(--ochre); }
+  .stay-time-row{ display:flex; gap:14px 18px; flex-wrap:wrap; }
+  .stay-time-field{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+  .stay-time-field input[type="time"]{
+    border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:3px 6px;
+    font-family:'JetBrains Mono',monospace; font-size:12px; outline:none;
+  }
+  .stay-time-field input[type="time"]:focus{ border-color:var(--ochre); }
+
   /* ---------- trip-level notes & attachments ---------- */
   .notes-card{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
@@ -690,6 +711,10 @@
     .card-note-btn{ font-size:12.5px; }
     .card-bottom{ gap:8px; }
     .todo-text-input{ font-size:14px; }
+    .stay-extra{ gap:10px 14px; }
+    .stay-check{ font-size:12.5px; }
+    .stay-check-sub{ width:112px; font-size:12px; }
+    .stay-time-row{ width:100%; gap:12px; }
   }
 </style>
 </head>
@@ -885,6 +910,19 @@
   function nid(prefix){ return prefix + "_" + (uid++) + "_" + Math.random().toString(36).slice(2,7); }
   function newTripId(){ return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : nid("trip"); }
 
+  // Default shape of a day's "住宿" (stay) entry, kept in one place so every
+  // creation site (blank trip, new day, DB backfill, clones) stays in sync.
+  function newStay(){
+    return {
+      name:"", cost:0, note:"", files:[], todos:[],
+      freeCancel:false, freeCancelDate:"",
+      noFreeCancel:false,
+      breakfast:false, breakfastTime:"",
+      dinner:false, dinnerTime:"",
+      checkin:"", checkout:""
+    };
+  }
+
   // A brand-new trip starts with sensible budget category defaults + one blank day.
   function blankTripState(name){
     return {
@@ -902,7 +940,7 @@
         { id: nid("cat"), name:"門票", unitCost:0, mode:"perDay" }
       ],
       itinerary: [
-        { id: nid("day"), date:"", weekday:"", city:"", stay:{ name:"", cost:0, note:"", files:[], todos:[] }, files:[], blocks:[] }
+        { id: nid("day"), date:"", weekday:"", city:"", stay: newStay(), files:[], blocks:[] }
       ]
     };
   }
@@ -912,10 +950,14 @@
     if(typeof trip.notes !== "string") trip.notes = "";
     if(!Array.isArray(trip.categories)) trip.categories = [];
     if(!Array.isArray(trip.itinerary) || trip.itinerary.length === 0){
-      trip.itinerary = [{ id: nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:"",files:[],todos:[]}, files:[], blocks:[] }];
+      trip.itinerary = [{ id: nid("day"), date:"", weekday:"", city:"", stay: newStay(), files:[], blocks:[] }];
     }
     trip.itinerary.forEach(day=>{
-      if(!day.stay) day.stay = { name:"", cost:0, note:"", files:[], todos:[] };
+      if(!day.stay) day.stay = newStay();
+      const staySrc = newStay();
+      Object.keys(staySrc).forEach(k=>{
+        if(day.stay[k] === undefined) day.stay[k] = staySrc[k];
+      });
       if(!Array.isArray(day.stay.files)) day.stay.files = [];
       if(!Array.isArray(day.stay.todos)) day.stay.todos = [];
       if(!Array.isArray(day.files)) day.files = [];
@@ -1409,7 +1451,7 @@
       state.itinerary = state.itinerary.slice(0, targetDays);
     } else if(state.itinerary.length < targetDays){
       for(let i = state.itinerary.length; i < targetDays; i++){
-        state.itinerary.push({ id: nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:"",files:[],todos:[]}, files:[], blocks:[] });
+        state.itinerary.push({ id: nid("day"), date:"", weekday:"", city:"", stay: newStay(), files:[], blocks:[] });
       }
     }
 
@@ -1528,7 +1570,7 @@
         date: d.date || "",
         weekday: d.weekday || "",
         city: d.city || "",
-        stay: d.stay || { name:"", cost:0, note:"", files:[], todos:[] },
+        stay: d.stay || newStay(),
         files: d.files || [],
         blocks: d.blocks || []
       }))
@@ -1790,7 +1832,7 @@
   }
 
   function renderDay(day, idx){
-    if(!day.stay) day.stay = { name:"", cost:0, note:"", files:[], todos:[] };
+    if(!day.stay) day.stay = newStay();
     if(!Array.isArray(day.stay.files)) day.stay.files = [];
     if(!Array.isArray(day.stay.todos)) day.stay.todos = [];
     if(!Array.isArray(day.files)) day.files = [];
@@ -1967,6 +2009,71 @@
       openBlockEditor(stay, title, refreshStayNoteBtn);
     });
     bar.appendChild(noteBtn);
+
+    // ---- 可勾選項目：取消政策／早餐／晚餐，各自可附加一個說明欄位 ----
+    function buildCheckItem(labelText, checkedKey, subKey, subPlaceholder, subType){
+      const item = document.createElement("label");
+      item.className = "stay-check";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!stay[checkedKey];
+
+      const span = document.createElement("span");
+      span.textContent = labelText;
+
+      item.appendChild(cb);
+      item.appendChild(span);
+
+      let subInput = null;
+      if(subKey){
+        subInput = document.createElement("input");
+        subInput.type = subType || "text";
+        subInput.className = "stay-check-sub";
+        subInput.placeholder = subPlaceholder || "";
+        subInput.value = stay[subKey] || "";
+        subInput.style.display = cb.checked ? "" : "none";
+        subInput.addEventListener("click", (e)=> e.stopPropagation());
+        subInput.addEventListener("input", ()=>{ stay[subKey] = subInput.value; scheduleSave(); });
+        item.appendChild(subInput);
+      }
+
+      cb.addEventListener("change", ()=>{
+        stay[checkedKey] = cb.checked;
+        if(subInput) subInput.style.display = cb.checked ? "" : "none";
+        scheduleSave();
+      });
+
+      return item;
+    }
+
+    function buildTimeField(labelText, key){
+      const field = document.createElement("label");
+      field.className = "stay-time-field";
+      const span = document.createElement("span"); span.textContent = labelText;
+      const input = document.createElement("input");
+      input.type = "time";
+      input.value = stay[key] || "";
+      input.addEventListener("input", ()=>{ stay[key] = input.value; scheduleSave(); });
+      field.appendChild(span);
+      field.appendChild(input);
+      return field;
+    }
+
+    const extraRow = document.createElement("div");
+    extraRow.className = "stay-extra";
+    extraRow.appendChild(buildCheckItem("可免費取消", "freeCancel", "freeCancelDate", "截止日期", "date"));
+    extraRow.appendChild(buildCheckItem("不可免費取消", "noFreeCancel", null));
+    extraRow.appendChild(buildCheckItem("含早餐", "breakfast", "breakfastTime", "時段，例如 07:00–10:00"));
+    extraRow.appendChild(buildCheckItem("含晚餐", "dinner", "dinnerTime", "時段，例如 18:00–20:00"));
+
+    const timeRow = document.createElement("div");
+    timeRow.className = "stay-time-row";
+    timeRow.appendChild(buildTimeField("入住", "checkin"));
+    timeRow.appendChild(buildTimeField("退房", "checkout"));
+    extraRow.appendChild(timeRow);
+
+    bar.appendChild(extraRow);
 
     return bar;
   }
@@ -2373,7 +2480,7 @@
     });
 
     document.getElementById("addDayBtn").addEventListener("click", ()=>{
-      state.itinerary.push({ id:nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:"",files:[],todos:[]}, files:[], blocks:[] });
+      state.itinerary.push({ id:nid("day"), date:"", weekday:"", city:"", stay: newStay(), files:[], blocks:[] });
       resequenceDates();
       render(); scheduleSave();
       const els = document.querySelectorAll(".day");
