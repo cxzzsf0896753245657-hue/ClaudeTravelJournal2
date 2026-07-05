@@ -6,6 +6,7 @@
 <title>旅程手帳｜行程與花費規劃</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --paper:#F5F0E4;
@@ -46,6 +47,42 @@
 
   .mono{ font-family:'JetBrains Mono', monospace; }
   .serif{ font-family:'Shippori Mincho', serif; }
+
+  /* ---------- login screen ---------- */
+  .login-screen{
+    position:fixed; inset:0; background:var(--paper); z-index:2000;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-box{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:32px 28px; max-width:360px; width:100%; text-align:center;
+  }
+  .login-box .stamp{ width:44px; height:44px; font-size:16px; margin:0 auto 14px; }
+  .login-box h1{ font-size:19px; margin:0 0 4px; }
+  .login-sub{ font-size:12.5px; color:var(--muted); margin:0 0 20px; }
+  .login-field{ display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+  .login-field input{
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13.5px; outline:none;
+    background:var(--surface-2);
+  }
+  .login-field input:focus{ border-color:var(--indigo); background:var(--surface); }
+  .login-field button{
+    border:none; background:var(--indigo); color:#fff; padding:10px; border-radius:8px; font-size:13.5px;
+  }
+  .login-field button:hover{ opacity:.92; }
+  .login-msg{ font-size:12px; color:var(--muted); min-height:16px; margin:4px 0 10px; }
+  .login-divider{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:11.5px; margin:14px 0; }
+  .login-divider::before, .login-divider::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .google-btn{
+    width:100%; border:1px solid var(--line); background:var(--surface); padding:10px; border-radius:8px;
+    font-size:13.5px; display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .google-btn:hover{ background:var(--surface-2); border-color:var(--indigo-2); }
+  .logout-btn{
+    background:var(--surface); border:1px solid var(--line); border-radius:999px;
+    padding:7px 14px; font-size:12.5px; color:var(--muted); cursor:pointer;
+  }
+  .logout-btn:hover{ color:var(--vermilion); border-color:var(--vermilion); }
 
   /* ---------- top bar ---------- */
   .topbar{
@@ -574,12 +611,31 @@
   <span>正在讀取你的行程資料…</span>
 </div>
 
+<div class="login-screen" id="loginScreen" style="display:none;">
+  <div class="login-box">
+    <div class="stamp serif">旅</div>
+    <h1 class="serif">旅程手帳</h1>
+    <p class="login-sub">登入後即可跨裝置同步你的行程</p>
+    <div class="login-field">
+      <input id="loginEmailInput" type="email" placeholder="輸入 Email" />
+      <button id="sendMagicLinkBtn" type="button">寄送登入連結</button>
+    </div>
+    <p class="login-msg" id="loginMsg"></p>
+    <div class="login-divider"><span>或</span></div>
+    <button id="googleLoginBtn" type="button" class="google-btn">使用 Google 登入</button>
+  </div>
+</div>
+
 <div id="folderView" class="folder-view" style="display:none;">
   <div class="folder-topbar">
     <div class="folder-topbar-inner">
       <div class="brand">
         <div class="stamp serif">旅</div>
         <h1 class="folder-title serif">我的行程資料夾</h1>
+      </div>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <span class="mono" id="userEmailLabel" style="font-size:11.5px; color:var(--muted);"></span>
+        <button class="logout-btn" id="logoutBtn2" type="button">登出</button>
       </div>
     </div>
   </div>
@@ -598,11 +654,12 @@
       <input id="tripName" class="brand-title-input" value="旅程手帳" />
     </div>
     <div class="stats">
-      <button class="share-btn" id="shareLinkBtn" title="複製這個行程的連結（僅限同一台瀏覽器／裝置有效，資料只存在本機，不會同步到雲端或其他裝置）">🔗 複製連結</button>
+      <button class="share-btn" id="shareLinkBtn" title="複製這個行程的連結（需用同一個帳號登入才能看到相同內容）">🔗 複製連結</button>
       <div class="stat-chip">天數 <b id="statDays">-</b></div>
       <div class="stat-chip">人數 <b id="statPeople">-</b></div>
       <div class="stat-chip budget">預算 <b id="statBudget">-</b></div>
       <div class="stat-chip actual">實際 <b id="statActual">-</b></div>
+      <button class="logout-btn" id="logoutBtn1" type="button">登出</button>
     </div>
   </div>
   <div class="day-nav-wrap">
@@ -693,7 +750,7 @@
     <button class="add-day-btn serif" id="addDayBtn">＋ 新增一天</button>
   </div>
 
-  <p class="footer-note">拖曳卡片左側「⋮⋮」把手可調整順序、跨時段或跨天移動。所有內容會自動儲存在這台瀏覽器裡，重新整理網頁也不會遺失；但目前不會同步到雲端或其他裝置。</p>
+  <p class="footer-note">拖曳卡片左側「⋮⋮」把手可調整順序、跨時段或跨天移動。所有內容會即時同步到雲端資料庫，用同一個帳號在任何裝置登入都能看到相同內容。</p>
 </div>
 
 </div><!-- /#tripView -->
@@ -711,72 +768,19 @@
 </div>
 
 <script>
-
 (function(){
   "use strict";
 
-  // ---------- Local storage persistence ----------
-  // Trip text data (itinerary, budget, etc.) is saved to this browser's
-  // localStorage. No network/cloud sync — the data lives only on this
-  // device/browser, but survives page refreshes and closing/reopening the tab.
-  const TRIP_DATA_PREFIX = "trip-data-v1-";
-  const INDEX_KEY = "trip-index-v1";
+  // =====================================================================
+  // Supabase 設定 —— 換成你自己 Project Settings -> API 裡的值
+  // =====================================================================
+  const SUPABASE_URL = "https://imsfvjnabwzdqohnfxsi.supabase.co"; // TODO: 換成你的 Project URL
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imltc2Z2am5hYnd6ZHFvaG5meHNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNzg5OTQsImV4cCI6MjA5ODc1NDk5NH0.unHyBYKSRgyADfnoPX0PH4RhcAYDS4G4flRc4VGjAso";              // TODO: 換成你的 anon public key
+  const ATTACHMENT_BUCKET = "attachments";                       // 對應你在 Storage 建立的 bucket 名稱
 
-  // ---------- Attachment content storage (localStorage) ----------
-  // Attachment bytes (images / PDFs / text files, as data URLs or plain text)
-  // are stored directly in localStorage under their own key, one key per
-  // attachment. Only lightweight metadata {id,name,kind,size} is kept inside
-  // the trip's own JSON record.
-  const ATT_PREFIX = "att-content-v1-";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // record shape: { kind: 'image'|'pdf'|'txt', content }
-  // content is a data URL for image/pdf, or a plain text string for txt.
-  async function storeAttachmentContent(id, kind, content){
-    try{
-      localStorage.setItem(ATT_PREFIX + id, JSON.stringify({ kind, content }));
-    }catch(e){
-      console.error("儲存附件失敗", e);
-      await showAlert("儲存檔案失敗，瀏覽器本機空間可能已滿，請刪除一些檔案後再試一次。");
-      throw e;
-    }
-  }
-
-  async function fetchAttachmentContent(id){
-    try{
-      const raw = localStorage.getItem(ATT_PREFIX + id);
-      return raw ? JSON.parse(raw) : null;
-    }catch(e){
-      console.error("讀取附件失敗", e);
-      return null;
-    }
-  }
-
-  async function removeAttachmentContent(id){
-    try{
-      localStorage.removeItem(ATT_PREFIX + id);
-    }catch(e){
-      console.error("刪除附件失敗", e);
-    }
-  }
-
-  // small in-memory cache so re-rendering the same attachment list within a
-  // session doesn't have to hit storage again just to redraw a thumbnail.
-  const attachmentContentCache = new Map();
-
-  async function loadAttachmentContent(id){
-    if(attachmentContentCache.has(id)) return attachmentContentCache.get(id);
-    const rec = await fetchAttachmentContent(id);
-    if(rec) attachmentContentCache.set(id, rec);
-    return rec;
-  }
-
-  // Deletes one or more attachments' content from storage and clears the local cache.
-  async function idbDeleteFiles(ids){
-    for(const id of (ids||[])){
-      await removeAttachmentContent(id);
-      attachmentContentCache.delete(id);
-    }
-  }
+  let currentUser = null; // { id, email, ... }
 
   const PERIODS = ["早上","下午","晚上"];
   const CATEGORIES = ["交通","景點","餐廳","住宿","其他"];
@@ -788,8 +792,9 @@
 
   let uid = 1;
   function nid(prefix){ return prefix + "_" + (uid++) + "_" + Math.random().toString(36).slice(2,7); }
+  function newTripId(){ return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : nid("trip"); }
 
-  // A brand-new folder starts completely empty — no categories, one blank day.
+  // A brand-new trip starts with sensible budget category defaults + one blank day.
   function blankTripState(name){
     return {
       name: name || "未命名行程",
@@ -798,7 +803,6 @@
       startDate: "",
       endDate: "",
       notes: "",
-      attachments: [],
       categories: [
         { id: nid("cat"), name:"機票", unitCost:0, mode:"once" },
         { id: nid("cat"), name:"住宿", unitCost:0, mode:"perNight" },
@@ -812,176 +816,34 @@
     };
   }
 
-  // Ensures older saved trips (from before notes/attachments existed) get sane defaults.
+  // Ensures records coming back from the DB always have the fields the UI expects.
   function backfillTrip(trip){
     if(typeof trip.notes !== "string") trip.notes = "";
-    if(!Array.isArray(trip.attachments)) trip.attachments = [];
-    (trip.itinerary||[]).forEach(day=>{
+    if(!Array.isArray(trip.categories)) trip.categories = [];
+    if(!Array.isArray(trip.itinerary) || trip.itinerary.length === 0){
+      trip.itinerary = [{ id: nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:""}, files:[], blocks:[] }];
+    }
+    trip.itinerary.forEach(day=>{
       if(!day.stay) day.stay = { name:"", cost:0, note:"" };
       if(!Array.isArray(day.files)) day.files = [];
-      (day.blocks||[]).forEach(b=>{
-        if(!Array.isArray(b.files)) b.files = [];
-      });
+      if(!Array.isArray(day.blocks)) day.blocks = [];
+      day.blocks.forEach(b=>{ if(!Array.isArray(b.files)) b.files = []; });
     });
     return trip;
   }
 
-  // Older saves (before the current attachment-storage scheme) stored each
-  // image's full base64 data URL directly inside the attachment object. This
-  // moves any such leftover bytes into the attachment content store and
-  // strips them out of the JSON that lives in the trip's own record.
-  async function migrateLegacyAttachmentList(list){
-    if(!Array.isArray(list)) return false;
-    let changed = false;
-    for(const att of list){
-      if(att && typeof att.dataUrl === "string" && !att.kind){
-        try{
-          await storeAttachmentContent(att.id, "image", att.dataUrl);
-        }catch(e){ console.error("搬移舊圖片資料失敗", e); }
-        att.kind = "image";
-        delete att.dataUrl;
-        changed = true;
-      }
-    }
-    return changed;
-  }
-
-  async function migrateLegacyTrip(trip){
-    let changed = false;
-    if(await migrateLegacyAttachmentList(trip.attachments)) changed = true;
-    for(const day of (trip.itinerary||[])){
-      if(await migrateLegacyAttachmentList(day.files)) changed = true;
-      for(const b of (day.blocks||[])){
-        if(await migrateLegacyAttachmentList(b.files)) changed = true;
-      }
-    }
-    return changed;
-  }
-
   let state = null;          // the currently-open trip's data
-  let currentTripId = null;  // id of the currently-open trip
-  let tripIndex = [];        // lightweight list for the folder view: [{id, name, days, people, dateLabel, updatedAt}]
+  let currentTripId = null;  // id of the currently-open trip (matches trips.id in Supabase)
+  let tripIndex = [];        // lightweight list for the folder view
   let saveTimer = null;
+  let controlsBound = false;
 
   function fmtMoney(n){
     n = Math.round(n || 0);
     return "NT$ " + n.toLocaleString("en-US");
   }
 
-  // ---------- persistence ----------
-  function indexEntryFrom(id, tripState){
-    return {
-      id,
-      name: tripState.name || "未命名行程",
-      days: tripState.days || 0,
-      people: tripState.people || 0,
-      dateLabel: (tripState.itinerary && tripState.itinerary[0] && tripState.itinerary[0].date) || tripState.startDate || "",
-      updatedAt: Date.now()
-    };
-  }
-
-  // The folder list ("which trips does this browser know about") lives in localStorage.
-  function loadTripIndex(){
-    try{
-      const raw = localStorage.getItem(INDEX_KEY);
-      if(raw){
-        const parsed = JSON.parse(raw);
-        if(Array.isArray(parsed)) return parsed;
-      }
-    }catch(e){
-      console.error("讀取本機行程清單失敗", e);
-    }
-    return [];
-  }
-
-  function saveTripIndexLocal(){
-    try{
-      localStorage.setItem(INDEX_KEY, JSON.stringify(tripIndex));
-    }catch(e){
-      console.error("寫入本機行程清單失敗", e);
-    }
-  }
-
-  // Reads one trip's full data from localStorage.
-  async function loadTrip(id){
-    try{
-      const raw = localStorage.getItem(TRIP_DATA_PREFIX + id);
-      if(raw){
-        const parsed = JSON.parse(raw);
-        if(parsed && Array.isArray(parsed.itinerary)){
-          const trip = backfillTrip(parsed);
-          const migrated = await migrateLegacyTrip(trip);
-          if(migrated){
-            try{ localStorage.setItem(TRIP_DATA_PREFIX + id, JSON.stringify(trip)); }
-            catch(e){ console.error("寫回搬移後的行程資料失敗", e); }
-          }
-          return trip;
-        }
-      }
-    }catch(e){
-      console.error("讀取行程資料失敗", e);
-      await showAlert("讀取行程資料失敗，本機儲存的資料可能已損毀。");
-    }
-    return blankTripState();
-  }
-
-  // Keeps the in-memory folder-list entry (name/days/people/date) accurate the
-  // instant something changes.
-  function syncIndexEntryNow(){
-    if(!currentTripId || !state) return;
-    const entry = tripIndex.find(t=>t.id===currentTripId);
-    if(!entry) return;
-    entry.name = state.name || "未命名行程";
-    entry.days = state.days || 0;
-    entry.people = state.people || 0;
-    entry.dateLabel = (state.itinerary[0] && state.itinerary[0].date) || state.startDate || "";
-    entry.updatedAt = Date.now();
-  }
-
-  function scheduleSave(){
-    syncIndexEntryNow();
-    saveTripIndexLocal();
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveState, 400);
-  }
-
-  async function saveState(){
-    if(!currentTripId || !state) return;
-    syncIndexEntryNow();
-    saveTripIndexLocal();
-    // Attachment bytes live under their own att-content-v1-* keys, not here —
-    // this payload is just text/metadata, so it should stay small no matter
-    // how many files are attached.
-    const payload = JSON.stringify(state);
-    try{
-      localStorage.setItem(TRIP_DATA_PREFIX + currentTripId, payload);
-      flashSaved();
-    }catch(e){
-      console.error("儲存失敗", e);
-      flashSaveError("⚠ 儲存失敗，瀏覽器本機空間可能已滿");
-    }
-  }
-
-  let flashTimer = null;
-  function flashSaved(){
-    const el = document.getElementById("saveIndicator");
-    el.classList.remove("error");
-    el.textContent = "已儲存 · " + new Date().toLocaleTimeString("zh-TW", {hour:'2-digit', minute:'2-digit'});
-    el.classList.add("show");
-    clearTimeout(flashTimer);
-    flashTimer = setTimeout(()=> el.classList.remove("show"), 1600);
-  }
-
-  function flashSaveError(msg){
-    const el = document.getElementById("saveIndicator");
-    el.classList.add("error");
-    el.textContent = msg || "⚠ 儲存失敗，請檢查瀏覽器本機空間後再試一次";
-    el.classList.add("show");
-    clearTimeout(flashTimer);
-    flashTimer = setTimeout(()=> el.classList.remove("show"), 5000);
-  }
-
-  // ---------- custom confirm/alert (native browser dialogs are blocked in this sandboxed iframe) ----------
+  // ---------- custom confirm/alert (native browser dialogs are blocked in some embeds) ----------
   function showConfirm(message){
     return new Promise(resolve=>{
       const overlay = document.getElementById("modalOverlay");
@@ -1029,12 +891,47 @@
     });
   }
 
-  // ---------- attachments (image / pdf / txt) ----------
-  // Images are downscaled + re-encoded as JPEG (still kept as a data URL) to
-  // save space; PDFs are read as-is into a data URL (can't be compressed);
-  // text files are read as plain text. The resulting "content" is stored in
-  // localStorage (see storeAttachmentContent above) — only lightweight
-  // metadata {id, name, size, kind} ever lives inside the trip's own record.
+  // =====================================================================
+  // 登入 / 登出 (Supabase Auth)
+  // =====================================================================
+  function showLoginScreen(show){
+    document.getElementById("loginScreen").style.display = show ? "flex" : "none";
+  }
+
+  async function sendMagicLink(){
+    const emailInput = document.getElementById("loginEmailInput");
+    const msg = document.getElementById("loginMsg");
+    const email = emailInput.value.trim();
+    if(!email){ msg.textContent = "請輸入 Email"; return; }
+    msg.textContent = "寄送中…";
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+    msg.textContent = error ? ("寄送失敗：" + error.message) : "登入連結已寄出，請到信箱點擊連結完成登入。";
+  }
+
+  async function loginWithGoogle(){
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+  }
+
+  async function logout(){
+    clearTimeout(saveTimer);
+    if(currentTripId) await saveState();
+    await supabase.auth.signOut();
+  }
+
+  function bindAuthControlsOnce(){
+    document.getElementById("sendMagicLinkBtn").addEventListener("click", sendMagicLink);
+    document.getElementById("googleLoginBtn").addEventListener("click", loginWithGoogle);
+  }
+
+  // =====================================================================
+  // 附件（圖片／PDF／文字檔）—— 存到 Supabase Storage
+  // =====================================================================
   function detectAttKind(file){
     const name = (file.name || "").toLowerCase();
     if(file.type && file.type.indexOf("image/") === 0) return "image";
@@ -1043,7 +940,14 @@
     return null;
   }
 
-  function fileToCompressedDataUrl(file, maxDim, quality){
+  function extFromFile(file, kind){
+    const name = file.name || "";
+    const dot = name.lastIndexOf(".");
+    if(dot > -1 && dot < name.length - 1) return name.slice(dot+1).toLowerCase();
+    return kind === "image" ? "jpg" : (kind === "pdf" ? "pdf" : "txt");
+  }
+
+  function compressImageToBlob(file, maxDim, quality){
     maxDim = maxDim || 1280; quality = quality || 0.82;
     return new Promise((resolve, reject)=>{
       const reader = new FileReader();
@@ -1059,9 +963,8 @@
           }
           const canvas = document.createElement("canvas");
           canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL("image/jpeg", quality));
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob=> blob ? resolve(blob) : reject(new Error("compress failed")), "image/jpeg", quality);
         };
         img.src = reader.result;
       };
@@ -1069,32 +972,8 @@
     });
   }
 
-  function readFileAsDataURL(file){
-    return new Promise((resolve, reject)=>{
-      const reader = new FileReader();
-      reader.onerror = ()=> reject(new Error("read failed"));
-      reader.onload = ()=> resolve(reader.result);
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function readFileAsText(file){
-    return new Promise((resolve, reject)=>{
-      const reader = new FileReader();
-      reader.onerror = ()=> reject(new Error("read failed"));
-      reader.onload = ()=> resolve(reader.result);
-      reader.readAsText(file);
-    });
-  }
-
-  function estimateContentKB(content){
-    if(typeof content !== "string") return 0;
-    const isDataUrl = content.indexOf("data:") === 0;
-    return Math.round((content.length * (isDataUrl ? 0.75 : 1)) / 1024);
-  }
-
-  // Reads (and compresses, for images) a FileList, stores each file's bytes
-  // in localStorage, and pushes lightweight metadata into targetArray. Calls onDone when finished.
+  // Uploads files to Storage under {userId}/{tripId}/{attachmentId}.{ext} and pushes
+  // lightweight metadata {id, name, size, kind, path} into targetArray.
   async function addFilesToArray(fileList, targetArray, onDone){
     const files = Array.from(fileList || []);
     for(const file of files){
@@ -1104,25 +983,65 @@
         continue;
       }
       try{
-        let content;
-        if(kind === "image") content = await fileToCompressedDataUrl(file);
-        else if(kind === "pdf") content = await readFileAsDataURL(file);
-        else content = await readFileAsText(file);
+        let blob = file;
+        let ext = extFromFile(file, kind);
+        if(kind === "image"){ blob = await compressImageToBlob(file); ext = "jpg"; }
 
-        const kb = estimateContentKB(content);
-        if(kb > 4000){
+        const kb = Math.round(blob.size / 1024);
+        if(kb > 8000){
           const ok = await showConfirm("「" + file.name + "」約 " + kb + "KB，檔案偏大，確定要加入嗎？");
           if(!ok) continue;
         }
+
         const id = nid("att");
-        await storeAttachmentContent(id, kind, content);
-        targetArray.push({ id, name: file.name, size: kb, kind });
+        const path = currentUser.id + "/" + currentTripId + "/" + id + "." + ext;
+        const contentType = blob.type || (kind === "txt" ? "text/plain" : "application/octet-stream");
+        const { error } = await supabase.storage.from(ATTACHMENT_BUCKET).upload(path, blob, { contentType, upsert:false });
+        if(error) throw error;
+
+        targetArray.push({ id, name: file.name, size: kb, kind, path });
       }catch(e){
         console.error(e);
-        await showAlert("處理「" + file.name + "」時發生錯誤，請再試一次。");
+        await showAlert("處理「" + file.name + "」時發生錯誤：" + (e.message || "請再試一次。"));
       }
     }
     onDone();
+  }
+
+  const signedUrlCache = new Map();
+  async function getSignedUrl(path){
+    if(!path) return null;
+    if(signedUrlCache.has(path)) return signedUrlCache.get(path);
+    const { data, error } = await supabase.storage.from(ATTACHMENT_BUCKET).createSignedUrl(path, 3600);
+    if(error){ console.error("取得檔案網址失敗", error); return null; }
+    signedUrlCache.set(path, data.signedUrl);
+    setTimeout(()=> signedUrlCache.delete(path), 55*60*1000);
+    return data.signedUrl;
+  }
+
+  async function deleteAttachmentFiles(paths){
+    const valid = (paths||[]).filter(Boolean);
+    if(!valid.length) return;
+    const { error } = await supabase.storage.from(ATTACHMENT_BUCKET).remove(valid);
+    if(error) console.error("刪除檔案失敗", error);
+  }
+
+  // Copies attachments (their Storage bytes + metadata) to a new set of ids/paths.
+  // targetTripId lets this be used both for "duplicate this trip" (new trip id)
+  // and "duplicate this day/card" within the same trip (targetTripId === currentTripId).
+  async function cloneAttachmentList(list, targetTripId){
+    const result = [];
+    for(const att of (list||[])){
+      const newId = nid("att");
+      const ext = att.path ? att.path.split(".").pop() : "dat";
+      const toPath = currentUser.id + "/" + targetTripId + "/" + newId + "." + ext;
+      if(att.path){
+        const { error } = await supabase.storage.from(ATTACHMENT_BUCKET).copy(att.path, toPath);
+        if(error) console.error("複製檔案失敗", error);
+      }
+      result.push(Object.assign({}, att, { id: newId, path: toPath }));
+    }
+    return result;
   }
 
   function renderAttachmentGrid(list, onRemove){
@@ -1132,49 +1051,40 @@
       const thumb = document.createElement("div");
       thumb.className = "attachment-thumb loading";
 
-      loadAttachmentContent(att.id).then(rec=>{
+      getSignedUrl(att.path).then(url=>{
         thumb.classList.remove("loading");
-        const kind = (rec && rec.kind) || att.kind || "image";
-        const content = rec ? rec.content : null;
-
-        if(!content){
+        if(!url){
           thumb.textContent = "⚠";
-          thumb.title = "找不到這個檔案的內容，可能已被清除";
+          thumb.title = "找不到這個檔案，可能已被刪除";
           return;
         }
-
-        if(kind === "image"){
+        if(att.kind === "image"){
           const img = document.createElement("img");
-          img.src = content; img.alt = att.name; img.title = att.name;
-          img.addEventListener("click", ()=> openLightbox(content, att.name));
+          img.src = url; img.alt = att.name; img.title = att.name;
+          img.addEventListener("click", ()=> openLightbox(url, att.name));
           thumb.appendChild(img);
         } else {
           const tile = document.createElement("button");
-          tile.type = "button";
-          tile.className = "file-tile";
-          tile.title = att.name;
-          const icon = document.createElement("div");
-          icon.className = "file-tile-icon";
-          icon.textContent = kind === "pdf" ? "📄" : "📝";
-          const label = document.createElement("div");
-          label.className = "file-tile-name";
-          label.textContent = att.name;
+          tile.type = "button"; tile.className = "file-tile"; tile.title = att.name;
+          const icon = document.createElement("div"); icon.className = "file-tile-icon";
+          icon.textContent = att.kind === "pdf" ? "📄" : "📝";
+          const label = document.createElement("div"); label.className = "file-tile-name"; label.textContent = att.name;
           tile.appendChild(icon); tile.appendChild(label);
           tile.addEventListener("click", ()=>{
-            if(kind === "pdf") openPdfInNewTab(content, att.name);
-            else openTextPreview(content, att.name);
+            if(att.kind === "pdf") window.open(url, "_blank");
+            else openTextPreview(url, att.name);
           });
           thumb.appendChild(tile);
         }
       }).catch(e=>{
-        console.error("讀取檔案內容失敗", e);
+        console.error("讀取檔案網址失敗", e);
         thumb.classList.remove("loading");
         thumb.textContent = "⚠";
       });
 
       const del = document.createElement("button");
       del.className = "attachment-del"; del.textContent = "×"; del.title = "刪除這個檔案";
-      del.addEventListener("click", (e)=>{ e.stopPropagation(); onRemove(att.id); });
+      del.addEventListener("click", (e)=>{ e.stopPropagation(); onRemove(att); });
       thumb.appendChild(del);
 
       grid.appendChild(thumb);
@@ -1199,30 +1109,7 @@
     close.addEventListener("click", remove);
   }
 
-  // Converts a PDF data URL to a Blob URL and opens it in a new tab (data:
-  // URLs can hit size/security limits when opened directly in some browsers).
-  function openPdfInNewTab(dataUrl, name){
-    try{
-      const commaIdx = dataUrl.indexOf(",");
-      const meta = dataUrl.slice(0, commaIdx);
-      const base64 = dataUrl.slice(commaIdx + 1);
-      const mimeMatch = meta.match(/data:(.*?);base64/);
-      const mime = mimeMatch ? mimeMatch[1] : "application/pdf";
-      const binary = atob(base64);
-      const arr = new Uint8Array(binary.length);
-      for(let i=0;i<binary.length;i++) arr[i] = binary.charCodeAt(i);
-      const blob = new Blob([arr], { type: mime });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      setTimeout(()=> URL.revokeObjectURL(url), 60000);
-    }catch(e){
-      console.error("開啟 PDF 失敗", e);
-      window.open(dataUrl, "_blank");
-    }
-  }
-
-  // Shows a text file's content in a simple read-only preview modal.
-  function openTextPreview(text, name){
+  async function openTextPreview(url, name){
     const overlay = document.createElement("div");
     overlay.className = "block-editor-overlay";
     const box = document.createElement("div");
@@ -1232,7 +1119,7 @@
     header.textContent = name || "文字檔內容";
     const pre = document.createElement("pre");
     pre.className = "text-preview-pre";
-    pre.textContent = text;
+    pre.textContent = "讀取中…";
     const close = document.createElement("button");
     close.className = "block-editor-close"; close.textContent = "關閉";
     box.appendChild(header); box.appendChild(pre); box.appendChild(close);
@@ -1241,10 +1128,15 @@
     function remove(){ overlay.remove(); }
     overlay.addEventListener("click", (e)=>{ if(e.target === overlay) remove(); });
     close.addEventListener("click", remove);
+    try{
+      const res = await fetch(url);
+      pre.textContent = await res.text();
+    }catch(e){
+      pre.textContent = "讀取失敗";
+    }
   }
 
-  // Per-block "備註/連結" editor: a bigger textarea + image attachments for one
-  // itinerary card (景點/交通/餐廳/住宿). onClose lets the card refresh its preview label.
+  // Per-block "備註/連結" editor: a bigger textarea + attachments for one itinerary card.
   function openBlockEditor(block, titleText, onClose){
     if(!Array.isArray(block.files)) block.files = [];
 
@@ -1270,9 +1162,9 @@
 
     function refreshAttachments(){
       attWrap.innerHTML = "";
-      attWrap.appendChild(renderAttachmentGrid(block.files, async (attId)=>{
-        await idbDeleteFiles([attId]);
-        block.files = block.files.filter(f=>f.id!==attId);
+      attWrap.appendChild(renderAttachmentGrid(block.files, async (att)=>{
+        await deleteAttachmentFiles([att.path]);
+        block.files = block.files.filter(f=>f.id!==att.id);
         refreshAttachments(); scheduleSave();
       }));
     }
@@ -1295,7 +1187,7 @@
 
     const hint = document.createElement("p");
     hint.className = "attachment-hint";
-    hint.textContent = "圖片會自動壓縮，檔案內容存在這台瀏覽器的本機儲存空間裡。";
+    hint.textContent = "圖片會自動壓縮並上傳到雲端，任何裝置用同一個帳號登入都看得到。";
     box.appendChild(hint);
 
     const doneBtn = document.createElement("button");
@@ -1316,8 +1208,6 @@
   // ---------- date helpers ----------
   const WEEKDAY_NAMES = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
 
-
-
   function parseISO(iso){ return new Date(iso + "T00:00:00"); }
   function toISO(d){
     const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
@@ -1329,13 +1219,10 @@
   }
   function weekdayOf(d){ return WEEKDAY_NAMES[d.getDay()]; }
 
-  // Sets state.days to match the itinerary's current length, and refreshes endDate accordingly.
   function daysBetweenISO(startISO, endISO){
     return Math.round((parseISO(endISO) - parseISO(startISO)) / 86400000) + 1;
   }
 
-  // Regenerates itinerary day count + each day's date/weekday to match state.startDate + state.days.
-  // Growing adds blank days at the end; shrinking asks for confirmation if it would delete content.
   async function syncItineraryToDates(){
     if(!state.startDate) return true;
     const start = parseISO(state.startDate);
@@ -1349,9 +1236,15 @@
         const ok = await showConfirm("新的天數比目前行程少，會刪除最後 " + removeCount + " 天已輸入的行程內容，確定要繼續嗎？");
         if(!ok) return false;
       }
+      const removedDays = state.itinerary.slice(targetDays);
+      const removedPaths = [];
+      removedDays.forEach(d=>{
+        (d.files||[]).forEach(f=> removedPaths.push(f.path));
+        (d.blocks||[]).forEach(b=> (b.files||[]).forEach(f=> removedPaths.push(f.path)));
+      });
+      await deleteAttachmentFiles(removedPaths);
       state.itinerary = state.itinerary.slice(0, targetDays);
     } else if(state.itinerary.length < targetDays){
-      const lastCity = state.itinerary.length ? state.itinerary[state.itinerary.length-1].city : "";
       for(let i = state.itinerary.length; i < targetDays; i++){
         state.itinerary.push({ id: nid("day"), date:"", weekday:"", city:"", stay:{name:"",cost:0,note:""}, files:[], blocks:[] });
       }
@@ -1370,8 +1263,6 @@
     return true;
   }
 
-  // Relabels existing itinerary days sequentially from state.startDate, without adding/removing days.
-  // Used after manually adding/removing a day card so dates stay contiguous.
   function resequenceDates(){
     state.days = state.itinerary.length;
     if(!state.startDate) return;
@@ -1432,6 +1323,130 @@
     return total;
   }
 
+  // =====================================================================
+  // 資料存取層 —— Supabase (trips / trip_days 資料表)
+  // =====================================================================
+  async function loadTripIndex(){
+    const { data, error } = await supabase
+      .from('trips')
+      .select('id,name,days,people,start_date,updated_at')
+      .order('updated_at', { ascending:false });
+    if(error){
+      console.error(error);
+      await showAlert("讀取行程清單失敗：" + error.message);
+      return [];
+    }
+    return (data||[]).map(t=>({
+      id: t.id, name: t.name, days: t.days, people: t.people, dateLabel: t.start_date || ""
+    }));
+  }
+
+  async function loadTrip(id){
+    const { data: tripRow, error: tripErr } = await supabase.from('trips').select('*').eq('id', id).single();
+    if(tripErr || !tripRow){
+      console.error(tripErr);
+      await showAlert("讀取行程資料失敗，可能是連結錯誤或沒有權限查看。");
+      return blankTripState();
+    }
+    const { data: dayRows, error: dayErr } = await supabase
+      .from('trip_days').select('*').eq('trip_id', id).order('sort_order', { ascending:true });
+    if(dayErr) console.error(dayErr);
+
+    const trip = {
+      name: tripRow.name,
+      days: tripRow.days,
+      people: tripRow.people,
+      startDate: tripRow.start_date || "",
+      endDate: tripRow.end_date || "",
+      notes: tripRow.notes || "",
+      categories: tripRow.categories || [],
+      itinerary: (dayRows||[]).map(d=>({
+        id: d.client_id || nid("day"),
+        date: d.date || "",
+        weekday: d.weekday || "",
+        city: d.city || "",
+        stay: d.stay || { name:"", cost:0, note:"" },
+        files: d.files || [],
+        blocks: d.blocks || []
+      }))
+    };
+    return backfillTrip(trip);
+  }
+
+  function syncIndexEntryNow(){
+    if(!currentTripId || !state) return;
+    const entry = tripIndex.find(t=>t.id===currentTripId);
+    if(!entry) return;
+    entry.name = state.name || "未命名行程";
+    entry.days = state.days || 0;
+    entry.people = state.people || 0;
+    entry.dateLabel = (state.itinerary[0] && state.itinerary[0].date) || state.startDate || "";
+  }
+
+  function scheduleSave(){
+    syncIndexEntryNow();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 700);
+  }
+
+  async function saveState(){
+    if(!currentTripId || !state || !currentUser) return;
+    syncIndexEntryNow();
+
+    const tripPayload = {
+      name: state.name,
+      days: state.days,
+      people: state.people,
+      start_date: state.startDate || null,
+      end_date: state.endDate || null,
+      notes: state.notes,
+      categories: state.categories,
+      updated_at: new Date().toISOString()
+    };
+    const { error: upErr } = await supabase.from('trips').update(tripPayload).eq('id', currentTripId);
+    if(upErr){ console.error(upErr); flashSaveError("⚠ 儲存失敗：" + upErr.message); return; }
+
+    // Simplest correct strategy: fully replace this trip's day rows every save.
+    const { error: delErr } = await supabase.from('trip_days').delete().eq('trip_id', currentTripId);
+    if(delErr){ console.error(delErr); flashSaveError("⚠ 儲存行程內容失敗"); return; }
+
+    const rows = state.itinerary.map((day, idx)=>({
+      trip_id: currentTripId,
+      client_id: day.id,
+      sort_order: idx,
+      date: day.date || "",
+      weekday: day.weekday || "",
+      city: day.city || "",
+      stay: day.stay,
+      files: day.files,
+      blocks: day.blocks
+    }));
+    if(rows.length){
+      const { error: insErr } = await supabase.from('trip_days').insert(rows);
+      if(insErr){ console.error(insErr); flashSaveError("⚠ 儲存行程內容失敗：" + insErr.message); return; }
+    }
+    flashSaved();
+  }
+
+  let flashTimer = null;
+  function flashSaved(){
+    const el = document.getElementById("saveIndicator");
+    el.classList.remove("error");
+    el.textContent = "已同步 · " + new Date().toLocaleTimeString("zh-TW", {hour:'2-digit', minute:'2-digit'});
+    el.classList.add("show");
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(()=> el.classList.remove("show"), 1600);
+  }
+
+  function flashSaveError(msg){
+    const el = document.getElementById("saveIndicator");
+    el.classList.add("error");
+    el.textContent = msg || "⚠ 儲存失敗，請檢查網路連線後再試一次";
+    el.classList.add("show");
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(()=> el.classList.remove("show"), 5000);
+  }
+
   // ---------- rendering ----------
   function render(){
     renderStats();
@@ -1481,7 +1496,7 @@
         if(cat.mode === m.v) opt.selected = true;
         modeSel.appendChild(opt);
       });
-      modeSel.addEventListener("change", ()=>{ cat.mode = modeSel.value; renderStats(); renderBudgetRowTotals(); scheduleSave(); });
+      modeSel.addEventListener("change", ()=>{ cat.mode = modeSel.value; renderStats(); renderBudget(); scheduleSave(); });
       tdMode.appendChild(modeSel);
 
       const tdUnit = document.createElement("td"); tdUnit.className = "num";
@@ -1513,10 +1528,6 @@
     const cell = tr.querySelector(".sub-cell");
     if(cell) cell.textContent = fmtMoney(categorySubtotal(cat));
     document.getElementById("budgetTotalAll").textContent = fmtMoney(budgetTotal());
-  }
-
-  function renderBudgetRowTotals(){
-    renderBudget();
   }
 
   function renderDayNav(){
@@ -1573,15 +1584,12 @@
     if(!nav || nav.dataset.scrollBound) return;
     nav.dataset.scrollBound = "1";
 
-    // vertical wheel/trackpad input scrolls the day list horizontally
     nav.addEventListener("wheel", (e)=>{
       if(Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
       e.preventDefault();
       nav.scrollLeft += e.deltaY;
     }, { passive:false });
 
-    // click-and-drag (mouse or touch) to scroll — listens on window (not pointer
-    // capture) so a plain click on a chip still fires normally afterwards.
     let isDown = false, startX = 0, startScroll = 0, moved = 0;
 
     function onMove(e){
@@ -1678,10 +1686,10 @@
     delDayBtn.addEventListener("click", async ()=>{
       const ok = await showConfirm("確定要刪除「Day "+(idx+1)+"」的行程嗎？這也會一併刪除這一天上傳的圖片與檔案。");
       if(ok){
-        const ids = [];
-        (day.files||[]).forEach(f=> ids.push(f.id));
-        (day.blocks||[]).forEach(b=> (b.files||[]).forEach(f=> ids.push(f.id)));
-        await idbDeleteFiles(ids);
+        const paths = [];
+        (day.files||[]).forEach(f=> paths.push(f.path));
+        (day.blocks||[]).forEach(b=> (b.files||[]).forEach(f=> paths.push(f.path)));
+        await deleteAttachmentFiles(paths);
         state.itinerary = state.itinerary.filter(d=>d.id!==day.id);
         resequenceDates();
         render(); scheduleSave();
@@ -1714,9 +1722,9 @@
     label.textContent = "📎 檔案";
     bar.appendChild(label);
 
-    bar.appendChild(renderAttachmentGrid(day.files, async (attId)=>{
-      await idbDeleteFiles([attId]);
-      day.files = day.files.filter(f=>f.id!==attId);
+    bar.appendChild(renderAttachmentGrid(day.files, async (att)=>{
+      await deleteAttachmentFiles([att.path]);
+      day.files = day.files.filter(f=>f.id!==att.id);
       renderDays(); scheduleSave();
     }));
 
@@ -1866,7 +1874,7 @@
     const delBtn = document.createElement("button");
     delBtn.className = "card-del"; delBtn.textContent = "×";
     delBtn.addEventListener("click", async ()=>{
-      await idbDeleteFiles((block.files||[]).map(f=>f.id));
+      await deleteAttachmentFiles((block.files||[]).map(f=>f.path));
       day.blocks = day.blocks.filter(b=>b.id!==block.id);
       renderDays(); renderStats(); scheduleSave();
     });
@@ -1933,8 +1941,7 @@
     dragCtx = {
       block, day, cardEl, ghost,
       offsetX: e.clientX - rect.left,
-      offsetY: e.clientY - rect.top,
-      startX: e.clientX, startY: e.clientY
+      offsetY: e.clientY - rect.top
     };
 
     window.addEventListener("pointermove", onDragMove);
@@ -1986,7 +1993,6 @@
       const newPeriod = dropWrap.dataset.period;
       const newDay = state.itinerary.find(d=>d.id===newDayId);
 
-      // figure out insertion index among real cards (excluding the dragged card + placeholder)
       const placeholder = dropWrap.querySelector(".placeholder-slot");
       let insertIndex = 0;
       if(placeholder){
@@ -1998,7 +2004,6 @@
         }
       }
 
-      // remove block from its current day (mutates the shared day object if newDay === day)
       day.blocks = day.blocks.filter(b=>b.id!==block.id);
       block.period = newPeriod;
 
@@ -2016,9 +2021,6 @@
   }
 
   // ---------- whole-day drag & drop ----------
-  // Dragging a day card to a new position moves its content (city, blocks, stay) there;
-  // since each day's date/weekday is always derived from its position + startDate,
-  // the day left behind simply "inherits" whatever date that slot now represents.
   let dayDragCtx = null;
 
   function startDayDrag(e, day, dayEl){
@@ -2108,6 +2110,28 @@
     scheduleSave();
   }
 
+  // ---------- clone helpers (duplicate day / duplicate card, within same trip) ----------
+  async function cloneBlockWithNewIds(block){
+    const clone = JSON.parse(JSON.stringify(block));
+    clone.id = nid("c");
+    clone.files = await cloneAttachmentList(clone.files, currentTripId);
+    return clone;
+  }
+
+  async function cloneDayWithNewIds(day){
+    const clone = JSON.parse(JSON.stringify(day));
+    clone.id = nid("day");
+    const newBlocks = [];
+    for(const b of (clone.blocks||[])){
+      b.id = nid("c");
+      b.files = await cloneAttachmentList(b.files, currentTripId);
+      newBlocks.push(b);
+    }
+    clone.blocks = newBlocks;
+    clone.files = await cloneAttachmentList(clone.files, currentTripId);
+    return clone;
+  }
+
   // ---------- global controls ----------
   function bindGlobalControls(){
     document.getElementById("tripName").addEventListener("input", (e)=>{
@@ -2167,14 +2191,16 @@
       const linkText = url.toString();
       try{
         await navigator.clipboard.writeText(linkText);
-        await showAlert("連結已複製！\n注意：資料只儲存在這台瀏覽器（本機），在其他裝置或瀏覽器開啟這個連結不會看到相同內容。");
+        await showAlert("連結已複製！打開這個連結時，需要用同一個帳號登入才能看到這個行程。");
       }catch(e){
-        await showAlert("無法自動複製，請手動複製以下連結（注意：資料只存在這台瀏覽器本機）：\n" + linkText);
+        await showAlert("無法自動複製，請手動複製以下連結（需用同一個帳號登入才能查看）：\n" + linkText);
       }
     });
   }
 
-  // ---------- folder (home) view ----------
+  // =====================================================================
+  // 資料夾（首頁）畫面
+  // =====================================================================
   function showFolderView(show){ document.getElementById("folderView").style.display = show ? "" : "none"; }
   function showTripView(show){ document.getElementById("tripView").style.display = show ? "" : "none"; }
 
@@ -2231,121 +2257,83 @@
   }
 
   async function createNewTrip(){
-    const id = nid("trip");
+    const id = newTripId();
     const blank = blankTripState("未命名行程 " + (tripIndex.length + 1));
-    tripIndex.push(indexEntryFrom(id, blank));
-    saveTripIndexLocal();
-    renderFolderGrid();
-    try{
-      localStorage.setItem(TRIP_DATA_PREFIX + id, JSON.stringify(blank));
-    }catch(e){
-      console.error("新增行程失敗", e);
-      await showAlert("新增行程時發生錯誤，瀏覽器本機空間可能已滿。");
-    }
-  }
-
-  // Copies a list of attachments to brand-new ids, including their actual
-  // bytes in storage (not just the metadata) so the clone is independent.
-  async function cloneAttachmentList(list){
-    const result = [];
-    for(const att of (list||[])){
-      const newId = nid("att");
-      try{
-        const rec = await loadAttachmentContent(att.id);
-        if(rec) await storeAttachmentContent(newId, rec.kind, rec.content);
-      }catch(e){ console.error("複製檔案內容失敗", e); }
-      result.push(Object.assign({}, att, { id: newId }));
-    }
-    return result;
-  }
-
-  // Deep-clones a single itinerary block (景點/交通/餐廳/住宿 card) and regenerates its ids.
-  async function cloneBlockWithNewIds(block){
-    const clone = JSON.parse(JSON.stringify(block));
-    clone.id = nid("c");
-    clone.files = await cloneAttachmentList(clone.files);
-    return clone;
-  }
-
-  // Deep-clones a single day and regenerates its internal ids (blocks + files).
-  async function cloneDayWithNewIds(day){
-    const clone = JSON.parse(JSON.stringify(day));
-    clone.id = nid("day");
-    const newBlocks = [];
-    for(const b of (clone.blocks||[])){
-      b.id = nid("c");
-      b.files = await cloneAttachmentList(b.files);
-      newBlocks.push(b);
-    }
-    clone.blocks = newBlocks;
-    clone.files = await cloneAttachmentList(clone.files);
-    return clone;
-  }
-
-  // Deep-clones a trip and regenerates every internal id so it's fully independent
-  // from the original (categories, days, blocks, and every level of attachments).
-  async function cloneTripWithNewIds(trip){
-    const clone = JSON.parse(JSON.stringify(trip));
-    (clone.categories||[]).forEach(c=>{ c.id = nid("cat"); });
-    clone.attachments = await cloneAttachmentList(clone.attachments);
-    const newItinerary = [];
-    for(const day of (clone.itinerary||[])){
-      day.id = nid("day");
-      const newBlocks = [];
-      for(const b of (day.blocks||[])){
-        b.id = nid("c");
-        b.files = await cloneAttachmentList(b.files);
-        newBlocks.push(b);
-      }
-      day.blocks = newBlocks;
-      day.files = await cloneAttachmentList(day.files);
-      newItinerary.push(day);
-    }
-    clone.itinerary = newItinerary;
-    return clone;
-  }
-
-  // Collects every attachment id referenced anywhere in a trip (trip-level,
-  // per-day, and per-card), used when wiping a trip's stored attachment content.
-  function collectTripAttachmentIds(trip){
-    const ids = [];
-    (trip.attachments||[]).forEach(a=> ids.push(a.id));
-    (trip.itinerary||[]).forEach(day=>{
-      (day.files||[]).forEach(f=> ids.push(f.id));
-      (day.blocks||[]).forEach(b=> (b.files||[]).forEach(f=> ids.push(f.id)));
+    const { error } = await supabase.from('trips').insert({
+      id, user_id: currentUser.id, name: blank.name, days: blank.days, people: blank.people,
+      notes: blank.notes, categories: blank.categories
     });
-    return ids;
+    if(error){ console.error(error); await showAlert("新增行程失敗：" + error.message); return; }
+
+    const dayRow = {
+      trip_id: id, client_id: blank.itinerary[0].id, sort_order:0,
+      date:"", weekday:"", city:"", stay: blank.itinerary[0].stay, files:[], blocks:[]
+    };
+    const { error: dayErr } = await supabase.from('trip_days').insert(dayRow);
+    if(dayErr) console.error(dayErr);
+
+    tripIndex.unshift({ id, name: blank.name, days: blank.days, people: blank.people, dateLabel:"" });
+    renderFolderGrid();
+  }
+
+  async function deleteTripStorageFolder(tripId){
+    const prefix = currentUser.id + "/" + tripId;
+    const { data, error } = await supabase.storage.from(ATTACHMENT_BUCKET).list(prefix);
+    if(error){ console.error(error); return; }
+    if(data && data.length){
+      const paths = data.map(f=> prefix + "/" + f.name);
+      await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths);
+    }
   }
 
   async function duplicateTrip(id, name){
     const original = await loadTrip(id);
-    const clone = backfillTrip(await cloneTripWithNewIds(original));
+    const newId = newTripId();
+    const clone = JSON.parse(JSON.stringify(original));
     clone.name = (name || original.name || "未命名行程") + "（複製）";
-    const newId = nid("trip");
-    tripIndex.push(indexEntryFrom(newId, clone));
-    saveTripIndexLocal();
+    (clone.categories||[]).forEach(c=> c.id = nid("cat"));
+
+    for(const day of clone.itinerary){
+      day.id = nid("day");
+      day.files = await cloneAttachmentList(day.files, newId);
+      for(const b of (day.blocks||[])){
+        b.id = nid("c");
+        b.files = await cloneAttachmentList(b.files, newId);
+      }
+    }
+
+    const { error } = await supabase.from('trips').insert({
+      id: newId, user_id: currentUser.id, name: clone.name, days: clone.days, people: clone.people,
+      start_date: clone.startDate || null, end_date: clone.endDate || null,
+      notes: clone.notes, categories: clone.categories
+    });
+    if(error){ console.error(error); await showAlert("複製行程失敗：" + error.message); return; }
+
+    const rows = clone.itinerary.map((day, idx)=>({
+      trip_id: newId, client_id: day.id, sort_order: idx, date: day.date||"", weekday: day.weekday||"",
+      city: day.city||"", stay: day.stay, files: day.files, blocks: day.blocks
+    }));
+    if(rows.length){
+      const { error: rowErr } = await supabase.from('trip_days').insert(rows);
+      if(rowErr) console.error(rowErr);
+    }
+
+    tripIndex.unshift({ id:newId, name: clone.name, days: clone.days, people: clone.people, dateLabel: clone.startDate||"" });
     renderFolderGrid();
-    try{
-      localStorage.setItem(TRIP_DATA_PREFIX + newId, JSON.stringify(clone));
-    }catch(e){ console.error("複製行程失敗", e); }
   }
 
   async function deleteTrip(id, name){
     const ok = await showConfirm("確定要刪除「" + (name || "這個行程") + "」嗎？此動作無法復原，包含所有已上傳的圖片與檔案。");
     if(!ok) return;
+    await deleteTripStorageFolder(id);
+    const { error } = await supabase.from('trips').delete().eq('id', id);
+    if(error){ console.error(error); await showAlert("刪除失敗：" + error.message); return; }
     tripIndex = tripIndex.filter(t=>t.id!==id);
-    saveTripIndexLocal();
     renderFolderGrid();
-    try{
-      const trip = await loadTrip(id);
-      await idbDeleteFiles(collectTripAttachmentIds(trip));
-    }catch(e){ console.error("清除附件失敗", e); }
-    try{
-      localStorage.removeItem(TRIP_DATA_PREFIX + id);
-    }catch(e){ console.error("刪除行程失敗", e); }
   }
 
   async function openTrip(id){
+    document.getElementById("loadingScreen").style.display = "flex";
     state = await loadTrip(id);
     currentTripId = id;
     document.title = (state.name || "旅程手帳") + "｜行程手帳";
@@ -2356,6 +2344,7 @@
     showTripView(true);
     window.scrollTo(0,0);
     render();
+    document.getElementById("loadingScreen").style.display = "none";
   }
 
   function backToFolders(){
@@ -2367,28 +2356,28 @@
     url.searchParams.delete("trip");
     window.history.replaceState({}, "", url);
     showTripView(false);
-    showFolderView(true);
-    renderFolderGrid();
+    loadTripIndex().then(list=>{ tripIndex = list; renderFolderGrid(); showFolderView(true); });
   }
 
-  // ---------- init ----------
-  async function init(){
-    tripIndex = loadTripIndex();
-    bindGlobalControls();
-    bindDayNavScroll();
-    document.getElementById("backToFoldersBtn").addEventListener("click", backToFolders);
+  // =====================================================================
+  // 啟動流程：先確認登入狀態，再決定顯示登入畫面或行程資料
+  // =====================================================================
+  async function bootAfterLogin(){
+    document.getElementById("userEmailLabel").textContent = currentUser.email || "";
+    if(!controlsBound){
+      bindGlobalControls();
+      bindDayNavScroll();
+      document.getElementById("backToFoldersBtn").addEventListener("click", backToFolders);
+      document.getElementById("logoutBtn1").addEventListener("click", logout);
+      document.getElementById("logoutBtn2").addEventListener("click", logout);
+      controlsBound = true;
+    }
 
-    // If opened via a link (?trip=xxxx) that this browser has data for, jump
-    // straight into that trip.
+    tripIndex = await loadTripIndex();
+
     const params = new URLSearchParams(window.location.search);
     const sharedId = params.get("trip");
     if(sharedId){
-      if(!tripIndex.find(t=>t.id===sharedId)){
-        const loaded = await loadTrip(sharedId);
-        tripIndex.push(indexEntryFrom(sharedId, loaded));
-        saveTripIndexLocal();
-      }
-      document.getElementById("loadingScreen").style.display = "none";
       await openTrip(sharedId);
       return;
     }
@@ -2396,11 +2385,43 @@
     renderFolderGrid();
     showTripView(false);
     showFolderView(true);
-    document.getElementById("loadingScreen").style.display = "none";
   }
 
-  init();
+  async function boot(){
+    bindAuthControlsOnce();
+
+    const { data: { session } } = await supabase.auth.getSession();
+    currentUser = session ? session.user : null;
+
+    supabase.auth.onAuthStateChange(async (event, session)=>{
+      const wasLoggedIn = !!currentUser;
+      currentUser = session ? session.user : null;
+
+      if(currentUser && !wasLoggedIn){
+        showLoginScreen(false);
+        document.getElementById("loadingScreen").style.display = "flex";
+        await bootAfterLogin();
+        document.getElementById("loadingScreen").style.display = "none";
+      } else if(!currentUser){
+        showTripView(false);
+        showFolderView(false);
+        document.getElementById("loadingScreen").style.display = "none";
+        showLoginScreen(true);
+      }
+    });
+
+    if(currentUser){
+      await bootAfterLogin();
+      document.getElementById("loadingScreen").style.display = "none";
+    } else {
+      document.getElementById("loadingScreen").style.display = "none";
+      showLoginScreen(true);
+    }
+  }
+
+  boot();
 })();
+
 </script>
 </body>
 </html>
