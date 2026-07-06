@@ -93,7 +93,7 @@
 
   /* ---------- top bar ---------- */
   .topbar{
-    position:sticky; top:0; z-index:50;
+    position:fixed; top:0; left:0; right:0; z-index:50;
     background: rgba(245,240,228,0.92);
     backdrop-filter: blur(6px);
     border-bottom:1px solid var(--line);
@@ -2106,6 +2106,29 @@
     });
   }
 
+  // .topbar is position:fixed so it always stays pinned to the top of the
+  // viewport while scrolling. Since that takes it out of normal document flow,
+  // this keeps .wrap's top padding in sync with the topbar's real (and
+  // variable — it can wrap to more lines on narrow screens or with many days)
+  // height so the page content never starts underneath it.
+  let topbarSpacerObserver = null;
+  function setupTopbarSpacer(){
+    const topbar = document.querySelector(".topbar");
+    const wrap = document.querySelector(".wrap");
+    if(!topbar || !wrap) return;
+    function updateSpacer(){
+      const basePad = window.innerWidth <= 600 ? 16 : 24;
+      wrap.style.paddingTop = (topbar.getBoundingClientRect().height + basePad) + "px";
+    }
+    updateSpacer();
+    if(topbarSpacerObserver) topbarSpacerObserver.disconnect();
+    if(window.ResizeObserver){
+      topbarSpacerObserver = new ResizeObserver(updateSpacer);
+      topbarSpacerObserver.observe(topbar);
+    }
+    window.addEventListener("resize", updateSpacer);
+  }
+
   function renderDays(){
     const container = document.getElementById("daysContainer");
     container.innerHTML = "";
@@ -2970,6 +2993,7 @@
     showTripView(true);
     window.scrollTo(0,0);
     render();
+    setupTopbarSpacer();
     document.getElementById("loadingScreen").style.display = "none";
   }
 
