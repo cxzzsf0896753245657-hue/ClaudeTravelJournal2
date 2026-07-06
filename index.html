@@ -247,6 +247,69 @@
   .compare-box.diff .value{ color:var(--matcha); }
   .compare-box .sub{ font-size:11px; color:var(--muted); margin-top:2px; }
 
+  /* ---------- 行前準備 (pre-trip packing checklist) ---------- */
+  .prep-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); margin-bottom:10px; overflow:hidden;
+  }
+  .prep-toggle{
+    width:100%; display:flex; align-items:center; gap:10px; padding:16px 18px;
+    border:none; background:none; text-align:left; cursor:pointer;
+  }
+  .prep-toggle:hover{ background:var(--surface-2); }
+  .prep-toggle-icon{
+    font-size:12px; color:var(--indigo-2); flex-shrink:0; transition:transform .15s; display:inline-block;
+  }
+  .prep-card.open .prep-toggle-icon{ transform:rotate(90deg); }
+  .prep-toggle-label{ font-family:'Shippori Mincho',serif; font-weight:600; font-size:15px; color:var(--ink); }
+  .prep-body{ padding:6px 18px 18px; border-top:1px solid var(--line); }
+  .prep-cat{
+    border:1px solid var(--line); border-radius:12px; margin-top:12px; overflow:hidden; background:var(--surface-2);
+  }
+  .prep-cat-head{ display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; }
+  .prep-cat-head:hover{ background:var(--surface); }
+  .prep-cat-toggle{
+    border:none; background:none; color:var(--indigo-2); font-size:12px; padding:2px 4px;
+    flex-shrink:0; cursor:pointer; transition:transform .15s; display:inline-block;
+  }
+  .prep-cat.open .prep-cat-toggle{ transform:rotate(90deg); }
+  .prep-cat-name{
+    flex:1; min-width:0; border:none; background:transparent; font-family:'Shippori Mincho',serif; font-weight:600;
+    font-size:14px; padding:4px 4px; outline:none; color:var(--ink);
+  }
+  .prep-cat-name:focus{ background:var(--surface); border-radius:4px; }
+  .prep-cat-del{
+    border:none; background:none; color:var(--muted); font-size:14px; padding:2px 6px;
+    border-radius:4px; flex-shrink:0;
+  }
+  .prep-cat-del:hover{ color:var(--vermilion); background:var(--vermilion-soft); }
+  .prep-cat-body{ padding:0 14px 14px; }
+  .prep-items{ display:flex; flex-direction:column; gap:1px; margin-bottom:8px; }
+  .prep-item{ display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:6px; cursor:pointer; }
+  .prep-item:hover{ background:var(--surface); }
+  .prep-item input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--matcha); flex-shrink:0; cursor:pointer; }
+  .prep-item-text{
+    flex:1; min-width:0; border:none; background:transparent; font-size:13px; padding:4px 2px;
+    outline:none; color:var(--ink); font-family:'Noto Sans TC',sans-serif;
+  }
+  .prep-item-text:focus{ background:var(--surface); border-radius:4px; }
+  .prep-item.done .prep-item-text{ color:var(--muted); text-decoration:line-through; }
+  .prep-item-del{
+    border:none; background:none; color:var(--muted); font-size:13px; padding:2px 6px;
+    border-radius:4px; flex-shrink:0;
+  }
+  .prep-item-del:hover{ color:var(--vermilion); background:var(--vermilion-soft); }
+  .prep-add-item-btn{
+    border:1px dashed var(--line); background:none; color:var(--indigo-2); font-size:12px;
+    padding:6px 12px; border-radius:8px;
+  }
+  .prep-add-item-btn:hover{ border-color:var(--indigo); background:var(--surface); }
+  .prep-add-cat-btn{
+    border:1.5px dashed var(--indigo-2); background:none; color:var(--indigo-2); font-family:'Shippori Mincho',serif;
+    font-size:13.5px; padding:9px 18px; border-radius:999px; margin-top:14px;
+  }
+  .prep-add-cat-btn:hover{ background:var(--surface-2); box-shadow:var(--shadow); }
+
   /* ---------- days ---------- */
   .day{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
@@ -757,6 +820,9 @@
     .time-editor-input{ width:100px; font-size:15px; }
     .link-label-input{ font-size:14px; }
     .link-url-input{ font-size:13px; }
+    .prep-toggle{ padding:14px 14px; }
+    .prep-body{ padding:6px 14px 14px; }
+    .prep-item-text{ font-size:14px; }
     .stay-extra{ gap:10px 14px; }
     .stay-check{ font-size:12.5px; }
     .stay-check-sub{ width:112px; font-size:12px; }
@@ -834,6 +900,20 @@
 
   <div class="section-title">
     <span class="num mono">01</span>
+    <h2>行前準備</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="prep-card" id="prepCard">
+    <button class="prep-toggle" id="prepToggleBtn" type="button">
+      <span class="prep-toggle-icon">▸</span>
+      <span class="prep-toggle-label">點我展開／收合行前準備清單</span>
+    </button>
+    <div class="prep-body" id="prepBody" style="display:none;"></div>
+  </div>
+
+  <div class="section-title">
+    <span class="num mono">02</span>
     <h2>預算試算</h2>
     <div class="rule"></div>
   </div>
@@ -902,7 +982,7 @@
   </div>
 
   <div class="section-title">
-    <span class="num mono">02</span>
+    <span class="num mono">03</span>
     <h2>每日行程（可拖曳調整）</h2>
     <div class="rule"></div>
   </div>
@@ -937,6 +1017,9 @@
   // =====================================================================
   // Supabase 設定 —— 換成你自己 Project Settings -> API 裡的值
   // =====================================================================
+  // 注意：「行前準備」清單功能需要 trips 資料表多一個 prep (jsonb) 欄位才能同步到雲端，
+  // 用法跟現有的 categories／notes 欄位一樣。如果還沒新增，這個功能仍可在畫面上正常
+  // 使用，只是重新整理後不會保留（程式會自動偵測並在 console 顯示提醒）。
   const SUPABASE_URL = "https://imsfvjnabwzdqohnfxsi.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_EAGhP9Bhd-liW_ecfMV03g_5QkNVO4W";
   const ATTACHMENT_BUCKET = "attachments";                       // 對應你在 Storage 建立的 bucket 名稱
@@ -971,6 +1054,24 @@
   }
 
   // A brand-new trip starts with sensible budget category defaults + one blank day.
+  // Default "行前準備" (pre-trip packing checklist) categories, seeded for brand-new
+  // trips and for any older trip that doesn't have this field yet.
+  function makeDefaultPrepCategories(){
+    const defs = [
+      ["重要文件", ["身分證","護照","簽證","國際駕照","機票"]],
+      ["3C", ["充電線","行動電源","萬用轉接頭","網卡","耳機"]],
+      ["衣服", ["日常衣物","防曬衣物","保暖衣物","內衣褲","襪子","拖鞋","帽子","飾品"]],
+      ["生活用品", ["洗面乳","沐浴乳","洗髮精","濕紙巾","隨身面紙","牙刷","牙膏","毛巾","卸妝用品","化妝用品","保養用品","防曬用品","雨傘"]],
+      ["個人藥品", ["保健食品","藥品","暈車藥","胃藥","感冒藥"]],
+      ["其他", ["水壺","鑰匙","頸枕","外幣","耳塞"]]
+    ];
+    return defs.map(([name, items])=>({
+      id: nid("prep"),
+      name,
+      items: items.map(t=>({ id: nid("pitem"), text:t, done:false }))
+    }));
+  }
+
   function blankTripState(name){
     return {
       name: name || "未命名行程",
@@ -986,6 +1087,7 @@
         { id: nid("cat"), name:"交通", unitCost:0, mode:"perDay" },
         { id: nid("cat"), name:"門票", unitCost:0, mode:"perDay" }
       ],
+      prep: makeDefaultPrepCategories(),
       itinerary: [
         { id: nid("day"), date:"", weekday:"", city:"", stay: newStay(), files:[], blocks:[] }
       ]
@@ -996,6 +1098,15 @@
   function backfillTrip(trip){
     if(typeof trip.notes !== "string") trip.notes = "";
     if(!Array.isArray(trip.categories)) trip.categories = [];
+    if(!Array.isArray(trip.prep) || trip.prep.length === 0) trip.prep = makeDefaultPrepCategories();
+    trip.prep.forEach(cat=>{
+      if(typeof cat.name !== "string") cat.name = "";
+      if(!Array.isArray(cat.items)) cat.items = [];
+      cat.items.forEach(it=>{
+        if(typeof it.text !== "string") it.text = "";
+        if(typeof it.done !== "boolean") it.done = false;
+      });
+    });
     if(!Array.isArray(trip.itinerary) || trip.itinerary.length === 0){
       trip.itinerary = [{ id: nid("day"), date:"", weekday:"", city:"", stay: newStay(), files:[], blocks:[] }];
     }
@@ -1026,6 +1137,11 @@
   let tripIndex = [];        // lightweight list for the folder view
   let saveTimer = null;
   let controlsBound = false;
+
+  // "行前準備" is a click-to-expand accordion; which parts are open is a session-only
+  // UI preference (not persisted), reset whenever a different trip is opened.
+  let prepOpen = false;
+  let prepOpenCats = new Set();
 
   function fmtMoney(n){
     n = Math.round(n || 0);
@@ -1849,6 +1965,7 @@
       endDate: tripRow.end_date || "",
       notes: tripRow.notes || "",
       categories: tripRow.categories || [],
+      prep: tripRow.prep || makeDefaultPrepCategories(),
       itinerary: (dayRows||[]).map(d=>({
         id: d.client_id || nid("day"),
         date: d.date || "",
@@ -1890,9 +2007,17 @@
       end_date: state.endDate || null,
       notes: state.notes,
       categories: state.categories,
+      prep: state.prep,
       updated_at: new Date().toISOString()
     };
-    const { error: upErr } = await supabase.from('trips').update(tripPayload).eq('id', currentTripId);
+    let upErr = (await supabase.from('trips').update(tripPayload).eq('id', currentTripId)).error;
+    if(upErr && /\bprep\b/i.test(upErr.message || "")){
+      // The Supabase "trips" table doesn't have a 'prep' (jsonb) column yet — save everything
+      // else so the rest of the app keeps working, and let the developer know via console.
+      console.warn("Supabase 的 trips 資料表尚未新增 'prep' (jsonb) 欄位，行前準備清單目前不會同步到雲端。請在 Supabase 為 trips 資料表新增一個 prep jsonb 欄位即可啟用同步。");
+      delete tripPayload.prep;
+      upErr = (await supabase.from('trips').update(tripPayload).eq('id', currentTripId)).error;
+    }
     if(upErr){ console.error(upErr); flashSaveError("⚠ 儲存失敗：" + upErr.message); return; }
 
     // Simplest correct strategy: fully replace this trip's day rows every save.
@@ -1939,6 +2064,7 @@
   // ---------- rendering ----------
   function render(){
     renderStats();
+    renderPrep();
     renderBudget();
     renderDays();
     renderDayNav();
@@ -1963,6 +2089,139 @@
     const sub = document.getElementById("cmpDiffSub");
     sub.textContent = diff >= 0 ? "尚在預算內" : "已超出預算";
     sub.style.color = diff >= 0 ? "var(--matcha)" : "var(--vermilion)";
+  }
+
+  // ---------- 行前準備 (packing checklist) rendering ----------
+  function renderPrep(){
+    if(!Array.isArray(state.prep)) state.prep = [];
+    const card = document.getElementById("prepCard");
+    const body = document.getElementById("prepBody");
+    card.classList.toggle("open", prepOpen);
+    body.style.display = prepOpen ? "" : "none";
+    if(!prepOpen) return; // don't bother rebuilding hidden content
+
+    body.innerHTML = "";
+    state.prep.forEach(cat=>{
+      body.appendChild(renderPrepCategory(cat));
+    });
+
+    const addCatBtn = document.createElement("button");
+    addCatBtn.type = "button"; addCatBtn.className = "prep-add-cat-btn"; addCatBtn.textContent = "＋ 新增大項目";
+    addCatBtn.addEventListener("click", ()=>{
+      const cat = { id: nid("prep"), name:"新項目", items:[] };
+      state.prep.push(cat);
+      prepOpenCats.add(cat.id);
+      renderPrep(); scheduleSave();
+      const nameInputs = body.querySelectorAll(".prep-cat-name");
+      if(nameInputs.length){
+        const last = nameInputs[nameInputs.length-1];
+        last.focus(); last.select();
+      }
+    });
+    body.appendChild(addCatBtn);
+  }
+
+  function renderPrepCategory(cat){
+    if(!Array.isArray(cat.items)) cat.items = [];
+    const isOpen = prepOpenCats.has(cat.id);
+
+    const wrap = document.createElement("div");
+    wrap.className = "prep-cat" + (isOpen ? " open" : "");
+    wrap.dataset.catId = cat.id;
+
+    const head = document.createElement("div");
+    head.className = "prep-cat-head";
+    head.addEventListener("click", (e)=>{
+      if(e.target === nameInput || e.target === delBtn) return;
+      if(prepOpenCats.has(cat.id)) prepOpenCats.delete(cat.id); else prepOpenCats.add(cat.id);
+      renderPrep();
+    });
+
+    const toggleBtn = document.createElement("span");
+    toggleBtn.className = "prep-cat-toggle"; toggleBtn.textContent = "▸";
+    head.appendChild(toggleBtn);
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text"; nameInput.className = "prep-cat-name"; nameInput.value = cat.name || "";
+    nameInput.placeholder = "大項目名稱";
+    nameInput.addEventListener("click", (e)=> e.stopPropagation());
+    nameInput.addEventListener("input", ()=>{ cat.name = nameInput.value; scheduleSave(); });
+    head.appendChild(nameInput);
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button"; delBtn.className = "prep-cat-del"; delBtn.textContent = "×";
+    delBtn.title = "刪除這個大項目";
+    delBtn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      const ok = await showConfirm("確定要刪除「" + (cat.name || "這個項目") + "」嗎？裡面的清單項目也會一併刪除。");
+      if(!ok) return;
+      state.prep = state.prep.filter(c=>c.id!==cat.id);
+      prepOpenCats.delete(cat.id);
+      renderPrep(); scheduleSave();
+    });
+    head.appendChild(delBtn);
+
+    wrap.appendChild(head);
+
+    const catBody = document.createElement("div");
+    catBody.className = "prep-cat-body";
+    catBody.style.display = isOpen ? "" : "none";
+
+    const itemsWrap = document.createElement("div");
+    itemsWrap.className = "prep-items";
+    cat.items.forEach(item=>{
+      itemsWrap.appendChild(renderPrepItem(cat, item));
+    });
+    catBody.appendChild(itemsWrap);
+
+    const addItemBtn = document.createElement("button");
+    addItemBtn.type = "button"; addItemBtn.className = "prep-add-item-btn"; addItemBtn.textContent = "＋ 新增項目";
+    addItemBtn.addEventListener("click", ()=>{
+      const newItem = { id: nid("pitem"), text:"", done:false };
+      cat.items.push(newItem);
+      prepOpenCats.add(cat.id);
+      renderPrep(); scheduleSave();
+      const input = document.querySelector('.prep-item[data-item-id="'+newItem.id+'"] .prep-item-text');
+      if(input) input.focus();
+    });
+    catBody.appendChild(addItemBtn);
+
+    wrap.appendChild(catBody);
+    return wrap;
+  }
+
+  function renderPrepItem(cat, item){
+    const row = document.createElement("label");
+    row.className = "prep-item" + (item.done ? " done" : "");
+    row.dataset.itemId = item.id;
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!item.done;
+    cb.addEventListener("change", ()=>{
+      item.done = cb.checked;
+      row.classList.toggle("done", item.done);
+      scheduleSave();
+    });
+    row.appendChild(cb);
+
+    const text = document.createElement("input");
+    text.type = "text"; text.className = "prep-item-text"; text.value = item.text || "";
+    text.placeholder = "項目名稱…";
+    text.addEventListener("click", (e)=> e.stopPropagation());
+    text.addEventListener("input", ()=>{ item.text = text.value; scheduleSave(); });
+    row.appendChild(text);
+
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "prep-item-del"; del.textContent = "×";
+    del.title = "刪除這個項目";
+    del.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      cat.items = cat.items.filter(i=>i.id!==item.id);
+      renderPrep(); scheduleSave();
+    });
+    row.appendChild(del);
+
+    return row;
   }
 
   function renderBudget(){
@@ -2772,6 +3031,11 @@
 
   // ---------- global controls ----------
   function bindGlobalControls(){
+    document.getElementById("prepToggleBtn").addEventListener("click", ()=>{
+      prepOpen = !prepOpen;
+      renderPrep();
+    });
+
     document.getElementById("tripName").addEventListener("input", (e)=>{
       state.name = e.target.value; document.title = state.name + "｜行程手帳"; scheduleSave();
     });
@@ -2897,10 +3161,16 @@
   async function createNewTrip(){
     const id = newTripId();
     const blank = blankTripState("未命名行程 " + (tripIndex.length + 1));
-    const { error } = await supabase.from('trips').insert({
+    const payload = {
       id, user_id: currentUser.id, name: blank.name, days: blank.days, people: blank.people,
-      notes: blank.notes, categories: blank.categories
-    });
+      notes: blank.notes, categories: blank.categories, prep: blank.prep
+    };
+    let { error } = await supabase.from('trips').insert(payload);
+    if(error && /\bprep\b/i.test(error.message || "")){
+      console.warn("Supabase 的 trips 資料表尚未新增 'prep' (jsonb) 欄位，行前準備清單目前不會同步到雲端。請在 Supabase 為 trips 資料表新增一個 prep jsonb 欄位即可啟用同步。");
+      delete payload.prep;
+      ({ error } = await supabase.from('trips').insert(payload));
+    }
     if(error){ console.error(error); await showAlert("新增行程失敗：" + error.message); return; }
 
     const dayRow = {
@@ -2930,6 +3200,12 @@
     const clone = JSON.parse(JSON.stringify(original));
     clone.name = (name || original.name || "未命名行程") + "（複製）";
     (clone.categories||[]).forEach(c=> c.id = nid("cat"));
+    if(!Array.isArray(clone.prep)) clone.prep = [];
+    clone.prep = clone.prep.map(cat=>({
+      id: nid("prep"),
+      name: cat.name,
+      items: (cat.items||[]).map(it=>({ id: nid("pitem"), text: it.text, done: it.done }))
+    }));
 
     for(const day of clone.itinerary){
       day.id = nid("day");
@@ -2951,11 +3227,16 @@
       }
     }
 
-    const { error } = await supabase.from('trips').insert({
+    const payload = {
       id: newId, user_id: currentUser.id, name: clone.name, days: clone.days, people: clone.people,
       start_date: clone.startDate || null, end_date: clone.endDate || null,
-      notes: clone.notes, categories: clone.categories
-    });
+      notes: clone.notes, categories: clone.categories, prep: clone.prep
+    };
+    let { error } = await supabase.from('trips').insert(payload);
+    if(error && /\bprep\b/i.test(error.message || "")){
+      delete payload.prep;
+      ({ error } = await supabase.from('trips').insert(payload));
+    }
     if(error){ console.error(error); await showAlert("複製行程失敗：" + error.message); return; }
 
     const rows = clone.itinerary.map((day, idx)=>({
@@ -2985,6 +3266,8 @@
     document.getElementById("loadingScreen").style.display = "flex";
     state = await loadTrip(id);
     currentTripId = id;
+    prepOpen = false;
+    prepOpenCats = new Set();
     document.title = (state.name || "旅程手帳") + "｜行程手帳";
     const url = new URL(window.location.href);
     url.searchParams.set("trip", id);
