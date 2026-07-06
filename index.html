@@ -555,6 +555,37 @@
   }
   .add-todo-btn:hover{ border-color:var(--indigo); background:var(--surface-2); }
 
+  .link-section{ margin-top:16px; padding-top:14px; border-top:1px dashed var(--line); }
+  .link-row{
+    border:1px solid var(--line); border-radius:10px; padding:8px 10px 7px; margin-bottom:8px;
+    background:var(--surface-2);
+  }
+  .link-row-top{ display:flex; align-items:center; gap:4px; }
+  .link-label-input{
+    flex:1; min-width:0; border:none; background:transparent; font-size:13px; font-weight:500;
+    padding:3px 2px; outline:none; color:var(--ink); font-family:'Noto Sans TC',sans-serif;
+  }
+  .link-label-input:focus{ background:var(--surface); border-radius:4px; }
+  .link-label-input::placeholder{ font-weight:400; color:var(--muted); }
+  .link-open-btn{
+    border:none; background:none; color:var(--indigo-2); font-size:13px; padding:2px 7px;
+    border-radius:4px; flex-shrink:0;
+  }
+  .link-open-btn:hover{ color:var(--indigo); background:var(--surface); }
+  .link-del-btn{ border:none; background:none; color:var(--muted); font-size:14px; padding:2px 6px; flex-shrink:0; border-radius:4px; }
+  .link-del-btn:hover{ color:var(--vermilion); background:var(--vermilion-soft); }
+  .link-url-input{
+    width:100%; border:none; border-top:1px dashed var(--line); background:transparent; font-size:12px;
+    padding:6px 2px 2px; outline:none; color:var(--indigo-2); font-family:'JetBrains Mono',monospace; margin-top:2px;
+  }
+  .link-url-input:focus{ color:var(--ink); }
+  .link-url-input::placeholder{ color:var(--muted); }
+  .add-link-btn{
+    border:1px dashed var(--line); background:none; color:var(--indigo-2); font-size:12px;
+    padding:6px 12px; border-radius:8px; margin-top:2px;
+  }
+  .add-link-btn:hover{ border-color:var(--indigo); background:var(--surface-2); }
+
   .time-editor-row{ display:flex; gap:14px; margin-bottom:10px; flex-wrap:wrap; }
   .time-editor-field{ display:flex; flex-direction:column; gap:5px; font-size:11.5px; color:var(--muted); }
   .time-editor-input{
@@ -724,6 +755,8 @@
     .card-bottom{ gap:8px; }
     .todo-text-input{ font-size:14px; }
     .time-editor-input{ width:100px; font-size:15px; }
+    .link-label-input{ font-size:14px; }
+    .link-url-input{ font-size:13px; }
     .stay-extra{ gap:10px 14px; }
     .stay-check{ font-size:12.5px; }
     .stay-check-sub{ width:112px; font-size:12px; }
@@ -928,7 +961,7 @@
   // creation site (blank trip, new day, DB backfill, clones) stays in sync.
   function newStay(){
     return {
-      name:"", cost:0, note:"", files:[], todos:[],
+      name:"", cost:0, note:"", files:[], todos:[], links:[],
       freeCancel:false, freeCancelDate:"",
       noFreeCancel:false,
       breakfast:false, breakfastTime:"",
@@ -974,11 +1007,13 @@
       });
       if(!Array.isArray(day.stay.files)) day.stay.files = [];
       if(!Array.isArray(day.stay.todos)) day.stay.todos = [];
+      if(!Array.isArray(day.stay.links)) day.stay.links = [];
       if(!Array.isArray(day.files)) day.files = [];
       if(!Array.isArray(day.blocks)) day.blocks = [];
       day.blocks.forEach(b=>{
         if(!Array.isArray(b.files)) b.files = [];
         if(!Array.isArray(b.todos)) b.todos = [];
+        if(!Array.isArray(b.links)) b.links = [];
         if(typeof b.endTime !== "string") b.endTime = "";
         if(typeof b.durationText !== "string") b.durationText = "";
       });
@@ -1345,6 +1380,82 @@
     hint.className = "attachment-hint";
     hint.textContent = "圖片會自動壓縮並上傳到雲端，任何裝置用同一個帳號登入都看得到。";
     box.appendChild(hint);
+
+    // ---- 相關連結（條列式，每筆有顯示名稱＋網址） ----
+    if(!Array.isArray(block.links)) block.links = [];
+
+    const linkSection = document.createElement("div");
+    linkSection.className = "link-section";
+    const linkLabel = document.createElement("div");
+    linkLabel.className = "todo-section-label";
+    linkLabel.textContent = "🔗 相關連結";
+    linkSection.appendChild(linkLabel);
+
+    const linksWrap = document.createElement("div");
+    linkSection.appendChild(linksWrap);
+
+    function refreshLinks(){
+      linksWrap.innerHTML = "";
+      block.links.forEach(link=>{
+        const row = document.createElement("div");
+        row.className = "link-row";
+
+        const top = document.createElement("div");
+        top.className = "link-row-top";
+
+        const labelInput = document.createElement("input");
+        labelInput.type = "text";
+        labelInput.className = "link-label-input";
+        labelInput.placeholder = "顯示名稱，例如：飯店官網";
+        labelInput.value = link.label || "";
+        labelInput.addEventListener("input", ()=>{ link.label = labelInput.value; scheduleSave(); });
+        top.appendChild(labelInput);
+
+        const openBtn = document.createElement("button");
+        openBtn.type = "button"; openBtn.className = "link-open-btn"; openBtn.textContent = "↗";
+        openBtn.title = "在新分頁開啟這個連結";
+        openBtn.addEventListener("click", ()=>{
+          const url = (link.url || "").trim();
+          if(!url) return;
+          window.open(/^https?:\/\//i.test(url) ? url : ("https://" + url), "_blank");
+        });
+        top.appendChild(openBtn);
+
+        const del = document.createElement("button");
+        del.type = "button"; del.className = "link-del-btn"; del.textContent = "×";
+        del.title = "刪除這個連結";
+        del.addEventListener("click", ()=>{
+          block.links = block.links.filter(l=>l.id!==link.id);
+          refreshLinks(); scheduleSave();
+        });
+        top.appendChild(del);
+
+        row.appendChild(top);
+
+        const urlInput = document.createElement("input");
+        urlInput.type = "text";
+        urlInput.className = "link-url-input";
+        urlInput.placeholder = "https://…";
+        urlInput.value = link.url || "";
+        urlInput.addEventListener("input", ()=>{ link.url = urlInput.value; scheduleSave(); });
+        row.appendChild(urlInput);
+
+        linksWrap.appendChild(row);
+      });
+    }
+    refreshLinks();
+
+    const addLinkBtn = document.createElement("button");
+    addLinkBtn.type = "button"; addLinkBtn.className = "add-link-btn"; addLinkBtn.textContent = "＋ 新增連結";
+    addLinkBtn.addEventListener("click", ()=>{
+      block.links.push({ id: nid("link"), label:"", url:"" });
+      refreshLinks(); scheduleSave();
+      const inputs = linksWrap.querySelectorAll(".link-label-input");
+      if(inputs.length) inputs[inputs.length-1].focus();
+    });
+    linkSection.appendChild(addLinkBtn);
+
+    box.appendChild(linkSection);
 
     // ---- 待辦清單 ----
     const todoSection = document.createElement("div");
@@ -2008,6 +2119,7 @@
     if(!day.stay) day.stay = newStay();
     if(!Array.isArray(day.stay.files)) day.stay.files = [];
     if(!Array.isArray(day.stay.todos)) day.stay.todos = [];
+    if(!Array.isArray(day.stay.links)) day.stay.links = [];
     if(!Array.isArray(day.files)) day.files = [];
 
     const wrap = document.createElement("div");
@@ -2135,6 +2247,7 @@
     const stay = day.stay;
     if(!Array.isArray(stay.files)) stay.files = [];
     if(!Array.isArray(stay.todos)) stay.todos = [];
+    if(!Array.isArray(stay.links)) stay.links = [];
 
     const bar = document.createElement("div");
     bar.className = "stay-card";
@@ -2168,12 +2281,14 @@
     function refreshStayNoteBtn(){
       const hasNote = stay.note && stay.note.trim();
       const fileCount = stay.files.length;
+      const linkCount = (stay.links||[]).length;
       const pending = pendingTodoCount(stay);
       let label = hasNote ? stay.note.trim() : "備註／附件／待辦";
       if(fileCount > 0) label += "  📎" + fileCount;
+      if(linkCount > 0) label += "  🔗" + linkCount;
       if(pending > 0) label = "⏳" + pending + "　" + label;
       noteBtn.textContent = label;
-      noteBtn.classList.toggle("has-content", !!(hasNote || fileCount || pending));
+      noteBtn.classList.toggle("has-content", !!(hasNote || fileCount || linkCount || pending));
       bar.classList.toggle("has-pending-todo", pending > 0);
     }
     refreshStayNoteBtn();
@@ -2278,7 +2393,7 @@
     addBtn.className = "add-card-btn";
     addBtn.textContent = "＋ 新增";
     addBtn.addEventListener("click", ()=>{
-      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", endTime:"", durationText:"", title:"", cost:0, note:"", files:[], todos:[] });
+      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", endTime:"", durationText:"", title:"", cost:0, note:"", files:[], todos:[], links:[] });
       renderDays(); renderStats(); scheduleSave();
       const newCardEl = document.querySelector('[data-block-id="'+day.blocks[day.blocks.length-1].id+'"] .title-input');
       if(newCardEl) newCardEl.focus();
@@ -2291,6 +2406,7 @@
   function renderCard(day, block){
     if(!Array.isArray(block.files)) block.files = [];
     if(!Array.isArray(block.todos)) block.todos = [];
+    if(!Array.isArray(block.links)) block.links = [];
 
     const card = document.createElement("div");
     card.className = "card";
@@ -2386,12 +2502,14 @@
     function refreshNoteBtn(){
       const hasNote = block.note && block.note.trim();
       const fileCount = block.files.length;
+      const linkCount = (block.links||[]).length;
       const pending = pendingTodoCount(block);
       let label = hasNote ? block.note.trim() : "備註／連結";
       if(fileCount > 0) label += "  📎" + fileCount;
+      if(linkCount > 0) label += "  🔗" + linkCount;
       if(pending > 0) label = "⏳" + pending + "　" + label;
       noteBtn.textContent = label;
-      noteBtn.classList.toggle("has-content", !!(hasNote || fileCount || pending));
+      noteBtn.classList.toggle("has-content", !!(hasNote || fileCount || linkCount || pending));
       card.classList.toggle("has-pending-todo", pending > 0);
     }
     refreshNoteBtn();
@@ -2598,6 +2716,8 @@
     clone.id = nid("c");
     if(!Array.isArray(clone.todos)) clone.todos = [];
     clone.todos = clone.todos.map(t=>Object.assign({}, t, { id: nid("todo") }));
+    if(!Array.isArray(clone.links)) clone.links = [];
+    clone.links = clone.links.map(l=>Object.assign({}, l, { id: nid("link") }));
     clone.files = await cloneAttachmentList(clone.files, currentTripId);
     return clone;
   }
@@ -2610,6 +2730,8 @@
       b.id = nid("c");
       if(!Array.isArray(b.todos)) b.todos = [];
       b.todos = b.todos.map(t=>Object.assign({}, t, { id: nid("todo") }));
+      if(!Array.isArray(b.links)) b.links = [];
+      b.links = b.links.map(l=>Object.assign({}, l, { id: nid("link") }));
       b.files = await cloneAttachmentList(b.files, currentTripId);
       newBlocks.push(b);
     }
@@ -2618,6 +2740,8 @@
     if(clone.stay){
       if(!Array.isArray(clone.stay.todos)) clone.stay.todos = [];
       clone.stay.todos = clone.stay.todos.map(t=>Object.assign({}, t, { id: nid("todo") }));
+      if(!Array.isArray(clone.stay.links)) clone.stay.links = [];
+      clone.stay.links = clone.stay.links.map(l=>Object.assign({}, l, { id: nid("link") }));
       clone.stay.files = await cloneAttachmentList(clone.stay.files, currentTripId);
     }
     return clone;
@@ -2791,11 +2915,15 @@
         b.id = nid("c");
         if(!Array.isArray(b.todos)) b.todos = [];
         b.todos = b.todos.map(t=>Object.assign({}, t, { id: nid("todo") }));
+        if(!Array.isArray(b.links)) b.links = [];
+        b.links = b.links.map(l=>Object.assign({}, l, { id: nid("link") }));
         b.files = await cloneAttachmentList(b.files, newId);
       }
       if(day.stay){
         if(!Array.isArray(day.stay.todos)) day.stay.todos = [];
         day.stay.todos = day.stay.todos.map(t=>Object.assign({}, t, { id: nid("todo") }));
+        if(!Array.isArray(day.stay.links)) day.stay.links = [];
+        day.stay.links = day.stay.links.map(l=>Object.assign({}, l, { id: nid("link") }));
         day.stay.files = await cloneAttachmentList(day.stay.files, newId);
       }
     }
