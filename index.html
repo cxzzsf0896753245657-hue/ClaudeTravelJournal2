@@ -349,11 +349,11 @@
   .stay-check-sub:focus{ border-color:var(--ochre); }
   .stay-time-row{ display:flex; gap:14px 18px; flex-wrap:wrap; }
   .stay-time-field{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
-  .stay-time-field input[type="time"]{
+  .stay-time-field input.stay-time-input{
     border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:3px 6px;
-    font-family:'JetBrains Mono',monospace; font-size:12px; outline:none;
+    font-family:'JetBrains Mono',monospace; font-size:12px; outline:none; width:88px;
   }
-  .stay-time-field input[type="time"]:focus{ border-color:var(--ochre); }
+  .stay-time-field input.stay-time-input:focus{ border-color:var(--ochre); }
 
   /* ---------- trip-level notes & attachments ---------- */
   .notes-card{
@@ -2047,12 +2047,14 @@
       return item;
     }
 
-    function buildTimeField(labelText, key){
+    function buildTimeField(labelText, key, placeholder){
       const field = document.createElement("label");
       field.className = "stay-time-field";
       const span = document.createElement("span"); span.textContent = labelText;
       const input = document.createElement("input");
-      input.type = "time";
+      input.type = "text";
+      input.className = "stay-time-input";
+      input.placeholder = placeholder || "";
       input.value = stay[key] || "";
       input.addEventListener("input", ()=>{ stay[key] = input.value; scheduleSave(); });
       field.appendChild(span);
@@ -2069,8 +2071,8 @@
 
     const timeRow = document.createElement("div");
     timeRow.className = "stay-time-row";
-    timeRow.appendChild(buildTimeField("入住", "checkin"));
-    timeRow.appendChild(buildTimeField("退房", "checkout"));
+    timeRow.appendChild(buildTimeField("入住", "checkin", "例如 15:00"));
+    timeRow.appendChild(buildTimeField("退房", "checkout", "例如 00:00"));
     extraRow.appendChild(timeRow);
 
     bar.appendChild(extraRow);
