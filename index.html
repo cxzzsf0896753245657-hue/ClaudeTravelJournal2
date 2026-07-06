@@ -462,7 +462,7 @@
     transform: rotate(-1.2deg) scale(1.02); background:var(--surface);
   }
   .card.has-pending-todo{ box-shadow: inset 3px 0 0 var(--vermilion); }
-  .card-top{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .card-top{ display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
   .handle{
     cursor:grab; color:var(--muted); font-size:13px; padding:2px 4px; touch-action:none; line-height:1;
     user-select:none;
@@ -478,12 +478,15 @@
   .cat-tag.餐廳{ background:var(--vermilion); color:#fff; }
   .cat-tag.娛樂{ background:var(--plum); color:#fff; }
   .cat-tag.其他{ background:#9C9284; color:#fff; }
-  .time-input{
+  .time-display{
     border:none; background:transparent; font-family:'JetBrains Mono',monospace; font-size:11.5px;
-    color:var(--muted); width:52px; outline:none; padding:2px;
+    color:var(--muted); outline:none; padding:2px 5px; border-radius:4px; cursor:pointer;
+    white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis;
   }
-  .time-input:focus{ background:var(--surface); border-radius:4px; }
-  .card-dup{ margin-left:auto; border:none; background:none; color:var(--muted); font-size:12px; padding:2px 5px; border-radius:4px; }
+  .time-display:hover{ background:var(--surface); }
+  .time-display.has-content{ color:var(--ink); font-weight:500; }
+  .card-top-actions{ margin-left:auto; display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  .card-dup{ border:none; background:none; color:var(--muted); font-size:12px; padding:2px 5px; border-radius:4px; }
   .card-dup:hover{ color:var(--indigo); background:var(--surface); }
   .card-del{ border:none; background:none; color:var(--muted); font-size:14px; padding:2px 4px; }
   .card-del:hover{ color:var(--vermilion); }
@@ -551,6 +554,15 @@
     padding:6px 12px; border-radius:8px; margin-top:4px;
   }
   .add-todo-btn:hover{ border-color:var(--indigo); background:var(--surface-2); }
+
+  .time-editor-row{ display:flex; gap:14px; margin-bottom:10px; flex-wrap:wrap; }
+  .time-editor-field{ display:flex; flex-direction:column; gap:5px; font-size:11.5px; color:var(--muted); }
+  .time-editor-input{
+    border:1px solid var(--line); border-radius:8px; background:var(--surface-2); padding:7px 10px;
+    font-family:'JetBrains Mono',monospace; font-size:14px; outline:none; width:96px; color:var(--ink);
+  }
+  .time-editor-input:focus{ border-color:var(--indigo); background:var(--surface); }
+  .time-editor-preview{ font-size:12.5px; color:var(--indigo-2); font-weight:500; margin:2px 0 14px; }
 
   .add-card-btn{
     border:1px dashed var(--line); background:none; color:var(--muted); font-size:12px;
@@ -711,6 +723,7 @@
     .card-note-btn{ font-size:12.5px; }
     .card-bottom{ gap:8px; }
     .todo-text-input{ font-size:14px; }
+    .time-editor-input{ width:100px; font-size:15px; }
     .stay-extra{ gap:10px 14px; }
     .stay-check{ font-size:12.5px; }
     .stay-check-sub{ width:112px; font-size:12px; }
@@ -966,6 +979,7 @@
       day.blocks.forEach(b=>{
         if(!Array.isArray(b.files)) b.files = [];
         if(!Array.isArray(b.todos)) b.todos = [];
+        if(typeof b.endTime !== "string") b.endTime = "";
       });
     });
     return trip;
@@ -1407,8 +1421,106 @@
     overlay.addEventListener("click", (e)=>{ if(e.target === overlay) close(); });
   }
 
+  // Small popup for setting a card's start time and (optional) end time.
+  // Leaving end time blank keeps the old "just show start time" behaviour;
+  // filling it in shows "start - end 停留Xh" with the duration auto-computed.
+  function openTimeEditor(block, onClose){
+    const overlay = document.createElement("div");
+    overlay.className = "block-editor-overlay";
+    const box = document.createElement("div");
+    box.className = "block-editor-box";
+
+    const header = document.createElement("div");
+    header.className = "block-editor-header";
+    header.textContent = "設定時間";
+    box.appendChild(header);
+
+    const row = document.createElement("div");
+    row.className = "time-editor-row";
+
+    const startField = document.createElement("label");
+    startField.className = "time-editor-field";
+    const startSpan = document.createElement("span"); startSpan.textContent = "開始時間";
+    const startInput = document.createElement("input");
+    startInput.type = "text"; startInput.className = "time-editor-input";
+    startInput.placeholder = "08:00"; startInput.value = block.time || "";
+    startField.appendChild(startSpan); startField.appendChild(startInput);
+
+    const endField = document.createElement("label");
+    endField.className = "time-editor-field";
+    const endSpan = document.createElement("span"); endSpan.textContent = "結束時間（選填）";
+    const endInput = document.createElement("input");
+    endInput.type = "text"; endInput.className = "time-editor-input";
+    endInput.placeholder = "10:00"; endInput.value = block.endTime || "";
+    endField.appendChild(endSpan); endField.appendChild(endInput);
+
+    row.appendChild(startField); row.appendChild(endField);
+    box.appendChild(row);
+
+    const preview = document.createElement("div");
+    preview.className = "time-editor-preview";
+    function refreshPreview(){
+      const label = formatTimeLabel({ time:startInput.value, endTime:endInput.value });
+      preview.textContent = label ? ("預覽：" + label) : "尚未設定時間";
+    }
+    refreshPreview();
+    box.appendChild(preview);
+
+    startInput.addEventListener("input", ()=>{ block.time = startInput.value; refreshPreview(); scheduleSave(); });
+    endInput.addEventListener("input", ()=>{ block.endTime = endInput.value; refreshPreview(); scheduleSave(); });
+
+    const hint = document.createElement("p");
+    hint.className = "attachment-hint";
+    hint.textContent = "只填開始時間就跟原本一樣只顯示時間；填了結束時間會自動算出停留多久。";
+    box.appendChild(hint);
+
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "block-editor-close"; doneBtn.textContent = "完成";
+    box.appendChild(doneBtn);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function close(){
+      overlay.remove();
+      if(onClose) onClose();
+    }
+    doneBtn.addEventListener("click", close);
+    overlay.addEventListener("click", (e)=>{ if(e.target === overlay) close(); });
+  }
+
   function pendingTodoCount(block){
     return (block.todos||[]).filter(t=>!t.done).length;
+  }
+
+  // Parses a loose "H:MM" / "HH:MM" string into minutes-since-midnight, or null if invalid.
+  function parseHM(str){
+    if(!str) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(str.trim());
+    if(!m) return null;
+    const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+    if(h > 23 || mi > 59) return null;
+    return h*60 + mi;
+  }
+
+  // Builds the display label for a card's time: just the start time if no end time is
+  // set, or "start - end 停留Xh" (auto-computed duration) once both are filled in.
+  function formatTimeLabel(block){
+    const start = (block.time || "").trim();
+    const end = (block.endTime || "").trim();
+    if(!start && !end) return "";
+    if(!start) return end;
+    if(!end) return start;
+    const sM = parseHM(start), eM = parseHM(end);
+    if(sM === null || eM === null) return start + " - " + end;
+    let diff = eM - sM;
+    if(diff < 0) diff += 24*60;
+    const h = Math.floor(diff/60), mi = diff%60;
+    let dur = "";
+    if(h > 0) dur += h + "小時";
+    if(mi > 0) dur += mi + "分";
+    if(!dur) dur = "0分";
+    return start + " - " + end + " 停留" + dur;
   }
 
   // ---------- date helpers ----------
@@ -2106,7 +2218,7 @@
     addBtn.className = "add-card-btn";
     addBtn.textContent = "＋ 新增";
     addBtn.addEventListener("click", ()=>{
-      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", title:"", cost:0, note:"", files:[], todos:[] });
+      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", endTime:"", title:"", cost:0, note:"", files:[], todos:[] });
       renderDays(); renderStats(); scheduleSave();
       const newCardEl = document.querySelector('[data-block-id="'+day.blocks[day.blocks.length-1].id+'"] .title-input');
       if(newCardEl) newCardEl.focus();
@@ -2149,11 +2261,22 @@
     });
     top.appendChild(catSel);
 
-    const timeInput = document.createElement("input");
-    timeInput.className = "time-input"; timeInput.value = block.time || "";
-    timeInput.placeholder = "時間";
-    timeInput.addEventListener("input", ()=>{ block.time = timeInput.value; scheduleSave(); });
-    top.appendChild(timeInput);
+    const timeBtn = document.createElement("button");
+    timeBtn.type = "button";
+    timeBtn.className = "time-display";
+    function refreshTimeBtn(){
+      const label = formatTimeLabel(block);
+      timeBtn.textContent = label || "時間";
+      timeBtn.classList.toggle("has-content", !!label);
+    }
+    refreshTimeBtn();
+    timeBtn.addEventListener("click", ()=>{
+      openTimeEditor(block, refreshTimeBtn);
+    });
+    top.appendChild(timeBtn);
+
+    const topActions = document.createElement("div");
+    topActions.className = "card-top-actions";
 
     const dupBtn = document.createElement("button");
     dupBtn.className = "card-dup"; dupBtn.textContent = "🗐"; dupBtn.title = "複製這張小卡";
@@ -2163,7 +2286,7 @@
       day.blocks.splice(pos + 1, 0, clone);
       renderDays(); renderStats(); scheduleSave();
     });
-    top.appendChild(dupBtn);
+    topActions.appendChild(dupBtn);
 
     const delBtn = document.createElement("button");
     delBtn.className = "card-del"; delBtn.textContent = "×";
@@ -2172,7 +2295,9 @@
       day.blocks = day.blocks.filter(b=>b.id!==block.id);
       renderDays(); renderStats(); scheduleSave();
     });
-    top.appendChild(delBtn);
+    topActions.appendChild(delBtn);
+
+    top.appendChild(topActions);
 
     card.appendChild(top);
 
