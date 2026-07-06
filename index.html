@@ -980,6 +980,7 @@
         if(!Array.isArray(b.files)) b.files = [];
         if(!Array.isArray(b.todos)) b.todos = [];
         if(typeof b.endTime !== "string") b.endTime = "";
+        if(typeof b.durationText !== "string") b.durationText = "";
       });
     });
     return trip;
@@ -1454,7 +1455,15 @@
     endInput.placeholder = "10:00"; endInput.value = block.endTime || "";
     endField.appendChild(endSpan); endField.appendChild(endInput);
 
-    row.appendChild(startField); row.appendChild(endField);
+    const durationField = document.createElement("label");
+    durationField.className = "time-editor-field";
+    const durationSpan = document.createElement("span"); durationSpan.textContent = "預計停留（選填）";
+    const durationInput = document.createElement("input");
+    durationInput.type = "text"; durationInput.className = "time-editor-input";
+    durationInput.placeholder = "2小時 或 40分鐘"; durationInput.value = block.durationText || "";
+    durationField.appendChild(durationSpan); durationField.appendChild(durationInput);
+
+    row.appendChild(startField); row.appendChild(endField); row.appendChild(durationField);
     box.appendChild(row);
 
     const preview = document.createElement("div");
@@ -1466,12 +1475,37 @@
     refreshPreview();
     box.appendChild(preview);
 
-    startInput.addEventListener("input", ()=>{ block.time = startInput.value; refreshPreview(); scheduleSave(); });
-    endInput.addEventListener("input", ()=>{ block.endTime = endInput.value; refreshPreview(); scheduleSave(); });
+    // Filling in "預計停留" recalculates the end time from start + duration.
+    // Editing the end time by hand takes priority and clears any stale duration value.
+    function recalcEndFromDuration(){
+      const startM = parseHM(startInput.value);
+      const durMin = parseDurationText(durationInput.value);
+      if(startM !== null && durMin !== null){
+        const endLabel = formatMinutesToHM(startM + durMin);
+        endInput.value = endLabel;
+        block.endTime = endLabel;
+      }
+    }
+
+    startInput.addEventListener("input", ()=>{
+      block.time = startInput.value;
+      recalcEndFromDuration();
+      refreshPreview(); scheduleSave();
+    });
+    durationInput.addEventListener("input", ()=>{
+      block.durationText = durationInput.value;
+      recalcEndFromDuration();
+      refreshPreview(); scheduleSave();
+    });
+    endInput.addEventListener("input", ()=>{
+      block.endTime = endInput.value;
+      if(durationInput.value){ durationInput.value = ""; block.durationText = ""; }
+      refreshPreview(); scheduleSave();
+    });
 
     const hint = document.createElement("p");
     hint.className = "attachment-hint";
-    hint.textContent = "只填開始時間就跟原本一樣只顯示時間；填了結束時間會自動算出停留多久。";
+    hint.textContent = "只填開始時間就跟原本一樣只顯示時間；填結束時間或填「預計停留」（例如 2小時、40分鐘）都會自動算出另一邊，並顯示停留多久。";
     box.appendChild(hint);
 
     const doneBtn = document.createElement("button");
@@ -1521,6 +1555,32 @@
     if(mi > 0) dur += mi + "分";
     if(!dur) dur = "0分";
     return start + " - " + end + " 停留" + dur;
+  }
+
+  // Parses a loose duration string like "2小時", "40分鐘", "1小時30分" or a bare
+  // number (treated as minutes) into total minutes. Returns null if unparsable.
+  function parseDurationText(str){
+    if(!str) return null;
+    str = str.trim();
+    if(!str) return null;
+    let total = 0, matched = false;
+    const hourMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:小時|個小時|時|hr|h)/i);
+    if(hourMatch){ total += parseFloat(hourMatch[1]) * 60; matched = true; }
+    const minMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:分鐘|分|min|m)/i);
+    if(minMatch){ total += parseFloat(minMatch[1]); matched = true; }
+    if(!matched){
+      const bare = str.match(/^(\d+(?:\.\d+)?)$/);
+      if(bare){ total = parseFloat(bare[1]); matched = true; }
+    }
+    if(!matched || isNaN(total)) return null;
+    return Math.round(total);
+  }
+
+  // Converts total minutes back into a "HH:MM" string, wrapping around midnight.
+  function formatMinutesToHM(totalMin){
+    let m = ((totalMin % (24*60)) + 24*60) % (24*60);
+    const h = Math.floor(m/60), mi = Math.round(m%60);
+    return String(h).padStart(2,'0') + ":" + String(mi).padStart(2,'0');
   }
 
   // ---------- date helpers ----------
@@ -2218,7 +2278,7 @@
     addBtn.className = "add-card-btn";
     addBtn.textContent = "＋ 新增";
     addBtn.addEventListener("click", ()=>{
-      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", endTime:"", title:"", cost:0, note:"", files:[], todos:[] });
+      day.blocks.push({ id:nid("c"), period, category:"其他", time:"", endTime:"", durationText:"", title:"", cost:0, note:"", files:[], todos:[] });
       renderDays(); renderStats(); scheduleSave();
       const newCardEl = document.querySelector('[data-block-id="'+day.blocks[day.blocks.length-1].id+'"] .title-input');
       if(newCardEl) newCardEl.focus();
